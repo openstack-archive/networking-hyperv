@@ -14,27 +14,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import platform
 import re
-import sys
 import time
 
-import eventlet
-eventlet.monkey_patch()
-
-from oslo.config import cfg
-from oslo import messaging
-
-from neutron.agent.common import config
-from neutron.agent import rpc as agent_rpc
-from neutron.agent import securitygroups_rpc as sg_rpc
-from neutron.common import config as common_config
-from neutron.common import constants as n_const
-from neutron.common import topics
-from neutron import context
 from neutron.i18n import _LE, _LI
 from neutron.openstack.common import log as logging
-from neutron.openstack.common import loopingcall
 
 from hyperv.neutron import constants
 from hyperv.neutron import utils
@@ -42,136 +26,60 @@ from hyperv.neutron import utilsfactory
 
 LOG = logging.getLogger(__name__)
 
-agent_opts = [
-    cfg.ListOpt(
-        'physical_network_vswitch_mappings',
-        default=[],
-        help=_('List of <physical_network>:<vswitch> '
-               'where the physical networks can be expressed with '
-               'wildcards, e.g.: ."*:external"')),
-    cfg.StrOpt(
-        'local_network_vswitch',
-        default='private',
-        help=_('Private vswitch name used for local networks')),
-    cfg.IntOpt('polling_interval', default=2,
-               help=_("The number of seconds the agent will wait between "
-                      "polling for local device changes.")),
-    cfg.BoolOpt('enable_metrics_collection',
-                default=False,
-                help=_('Enables metrics collections for switch ports by using '
-                       'Hyper-V\'s metric APIs. Collected data can by '
-                       'retrieved by other apps and services, e.g.: '
-                       'Ceilometer. Requires Hyper-V / Windows Server 2012 '
-                       'and above')),
-    cfg.IntOpt('metrics_max_retries',
-               default=100,
-               help=_('Specifies the maximum number of retries to enable '
-                      'Hyper-V\'s port metrics collection. The agent will try '
-                      'to enable the feature once every polling_interval '
-                      'period for at most metrics_max_retries or until it '
-                      'succeedes.'))
-]
 
+class HyperVNeutronAgentMixin(object):
 
-CONF = cfg.CONF
-CONF.register_opts(agent_opts, "AGENT")
-config.register_agent_state_opts_helper(cfg.CONF)
+    def __init__(self, conf=None):
+        """Initializes local configuration of the Hyper-V Neutron Agent.
 
+        :param conf: dict or dict-like object containing the configuration
+                     details used by this Agent. If None is specified, default
+                     values are used instead. conf format is as follows:
+        {
+            'host': string,
+            'AGENT': {'polling_interval': int,
+                       'local_network_vswitch': string,
+                       'physical_network_vswitch_mappings': array,
+                       'enable_metrics_collection': boolean,
+                       'metrics_max_retries': int},
+            'SECURITYGROUP': {'enable_security_group': boolean}
+        }
 
-class HyperVSecurityAgent(sg_rpc.SecurityGroupAgentRpcMixin):
+        For more information on the arguments, their meaning and their default
+        values, visit: http://docs.openstack.org/juno/config-reference/content/
+networking-plugin-hyperv_agent.html
+        """
 
-    def __init__(self, context, plugin_rpc):
-        super(HyperVSecurityAgent, self).__init__()
-        self.context = context
-        self.plugin_rpc = plugin_rpc
-
-        if sg_rpc.is_firewall_enabled():
-            self.init_firewall()
-            self._setup_rpc()
-
-    def _setup_rpc(self):
-        self.topic = topics.AGENT
-        self.endpoints = [HyperVSecurityCallbackMixin(self)]
-        consumers = [[topics.SECURITY_GROUP, topics.UPDATE]]
-
-        self.connection = agent_rpc.create_consumers(self.endpoints,
-                                                     self.topic,
-                                                     consumers)
-
-
-class HyperVSecurityCallbackMixin(sg_rpc.SecurityGroupAgentRpcCallbackMixin):
-
-    target = messaging.Target(version='1.1')
-
-    def __init__(self, sg_agent):
-        super(HyperVSecurityCallbackMixin, self).__init__()
-        self.sg_agent = sg_agent
-
-
-class HyperVNeutronAgent(object):
-    # Set RPC API version to 1.1 by default.
-    target = messaging.Target(version='1.1')
-
-    def __init__(self):
-        super(HyperVNeutronAgent, self).__init__()
+        super(HyperVNeutronAgentMixin, self).__init__()
         self._utils = utilsfactory.get_hypervutils()
-        self._polling_interval = CONF.AGENT.polling_interval
-        self._load_physical_network_mappings()
         self._network_vswitch_map = {}
         self._port_metric_retries = {}
-        self._set_agent_state()
-        self._setup_rpc()
 
-    def _set_agent_state(self):
-        self.agent_state = {
-            'binary': 'neutron-hyperv-agent',
-            'host': cfg.CONF.host,
-            'topic': n_const.L2_AGENT_TOPIC,
-            'configurations': {'vswitch_mappings':
-                               self._physical_network_mappings},
-            'agent_type': n_const.AGENT_TYPE_HYPERV,
-            'start_flag': True}
+        self.plugin_rpc = None
 
-    def _report_state(self):
-        try:
-            self.state_rpc.report_state(self.context,
-                                        self.agent_state)
-            self.agent_state.pop('start_flag', None)
-        except Exception:
-            LOG.exception(_LE("Failed reporting state!"))
+        conf = conf or {}
+        agent_conf = conf.get('AGENT', {})
+        security_conf = conf.get('SECURITYGROUP', {})
 
-    def _setup_rpc(self):
-        self.agent_id = 'hyperv_%s' % platform.node()
-        self.topic = topics.AGENT
-        self.plugin_rpc = agent_rpc.PluginApi(topics.PLUGIN)
-        self.sg_plugin_rpc = sg_rpc.SecurityGroupServerRpcApi(topics.PLUGIN)
+        self._host = conf.get('host', None)
 
-        self.state_rpc = agent_rpc.PluginReportStateAPI(topics.PLUGIN)
+        self._polling_interval = agent_conf.get('polling_interval', 2)
+        self._local_network_vswitch = agent_conf.get('local_network_vswitch',
+                                                     'private')
+        self._phys_net_map = agent_conf.get(
+            'physical_network_vswitch_mappings', [])
+        self.enable_metrics_collection = agent_conf.get(
+            'enable_metrics_collection', False)
+        self._metrics_max_retries = agent_conf.get('metrics_max_retries', 100)
 
-        # RPC network init
-        self.context = context.get_admin_context_without_session()
-        # Handle updates from service
-        self.endpoints = [self]
-        # Define the listening consumers for the agent
-        consumers = [[topics.PORT, topics.UPDATE],
-                     [topics.NETWORK, topics.DELETE],
-                     [topics.PORT, topics.DELETE],
-                     [constants.TUNNEL, topics.UPDATE]]
-        self.connection = agent_rpc.create_consumers(self.endpoints,
-                                                     self.topic,
-                                                     consumers)
+        self.enable_security_groups = security_conf.get(
+            'enable_security_group', False)
 
-        self.sec_groups_agent = HyperVSecurityAgent(
-            self.context, self.sg_plugin_rpc)
-        report_interval = CONF.AGENT.report_interval
-        if report_interval:
-            heartbeat = loopingcall.FixedIntervalLoopingCall(
-                self._report_state)
-            heartbeat.start(interval=report_interval)
+        self._load_physical_network_mappings(self._phys_net_map)
 
-    def _load_physical_network_mappings(self):
+    def _load_physical_network_mappings(self, phys_net_vswitch_mappings):
         self._physical_network_mappings = {}
-        for mapping in CONF.AGENT.physical_network_vswitch_mappings:
+        for mapping in phys_net_vswitch_mappings:
             parts = mapping.split(':')
             if len(parts) != 2:
                 LOG.debug('Invalid physical network mapping: %s', mapping)
@@ -210,7 +118,7 @@ class HyperVNeutronAgent(object):
     def port_update(self, context, port=None, network_type=None,
                     segmentation_id=None, physical_network=None):
         LOG.debug("port_update received")
-        if CONF.SECURITYGROUP.enable_security_group:
+        if self.enable_security_groups:
             if 'security_groups' in port:
                 self.sec_groups_agent.refresh_firewall()
 
@@ -224,7 +132,7 @@ class HyperVNeutronAgent(object):
             vswitch_name = self._get_vswitch_for_physical_network(
                 physical_network)
         else:
-            vswitch_name = CONF.AGENT.local_network_vswitch
+            vswitch_name = self.local_network_vswitch
         return vswitch_name
 
     def _provision_network(self, port_id,
@@ -292,9 +200,9 @@ class HyperVNeutronAgent(object):
         else:
             LOG.error(_LE('Unsupported network type %s'), network_type)
 
-        if CONF.AGENT.enable_metrics_collection:
+        if self.enable_metrics_collection:
             self._utils.enable_port_metrics_collection(port_id)
-            self._port_metric_retries[port_id] = CONF.AGENT.metrics_max_retries
+            self._port_metric_retries[port_id] = self._metrics_max_retries
 
     def _port_unbound(self, port_id):
         (net_uuid, map) = self._get_network_vswitch_map_by_port_id(port_id)
@@ -310,7 +218,7 @@ class HyperVNeutronAgent(object):
             self._reclaim_local_network(net_uuid)
 
     def _port_enable_control_metrics(self):
-        if not CONF.AGENT.enable_metrics_collection:
+        if not self.enable_metrics_collection:
             return
 
         for port_id in self._port_metric_retries.keys():
@@ -378,7 +286,7 @@ class HyperVNeutronAgent(object):
 
                 # check if security groups is enabled.
                 # if not, teardown the security group rules
-                if CONF.SECURITYGROUP.enable_security_group:
+                if self.enable_security_groups:
                     self.sec_groups_agent.prepare_devices_filter([device])
                 else:
                     self._utils.remove_all_security_rules(
@@ -386,7 +294,7 @@ class HyperVNeutronAgent(object):
                 self.plugin_rpc.update_device_up(self.context,
                                                  device,
                                                  self.agent_id,
-                                                 cfg.CONF.host)
+                                                 self._host)
         return False
 
     def _treat_devices_removed(self, devices):
@@ -397,7 +305,7 @@ class HyperVNeutronAgent(object):
                 self.plugin_rpc.update_device_down(self.context,
                                                    device,
                                                    self.agent_id,
-                                                   cfg.CONF.host)
+                                                   self._host)
             except Exception as e:
                 LOG.debug("Removing port failed for device %(device)s: %(e)s",
                           dict(device=device, e=e))
