@@ -203,14 +203,3 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
             report_st.assert_called_with(self.agent.context,
                                          self.agent.agent_state)
             self.assertNotIn("start_flag", self.agent.agent_state)
-
-    def test_main(self):
-        with mock.patch.object(hyperv_neutron_agent,
-                               'HyperVNeutronAgent') as plugin:
-            with mock.patch.object(hyperv_neutron_agent,
-                                   'common_config') as common_config:
-                hyperv_neutron_agent.main()
-
-                self.assertTrue(common_config.init.called)
-                self.assertTrue(common_config.setup_logging.called)
-                plugin.assert_has_calls([mock.call().daemon_loop()])

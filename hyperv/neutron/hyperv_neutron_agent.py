@@ -452,13 +452,3 @@ class HyperVNeutronAgent(object):
                           {'polling_interval': self._polling_interval,
                            'elapsed': elapsed})
 
-
-def main():
-    common_config.init(sys.argv[1:])
-    common_config.setup_logging()
-
-    plugin = HyperVNeutronAgent()
-
-    # Start everything.
-    LOG.info(_LI("Agent initialized successfully, now running... "))
-    plugin.daemon_loop()
