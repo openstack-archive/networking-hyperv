@@ -30,6 +30,23 @@ Finally, make sure the tenant_network_types field contains network types
 supported by Hyper-V: local, flat, vlan.
 
 
+Tests
+-----
+
+You will have to install the test dependencies first to be able to run the
+tests.
+
+::
+
+    C:\neutron-ml2-hyperv> pip install -r test-requirements.txt
+
+You can run the unit tests with the following command.
+
+::
+
+    C:\neutron-ml2-hyperv> nosetests cloudbase\tests
+
+
 HACKING
 -------
 
