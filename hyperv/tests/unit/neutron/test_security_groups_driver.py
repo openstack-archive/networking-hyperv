@@ -27,7 +27,7 @@ from hyperv.tests import base
 CONF = cfg.CONF
 
 
-class TestHyperVSecurityGroupsDriver(base.BaseTestCase):
+class TestHyperVSecurityGroupsDriverMixin(base.BaseTestCase):
 
     _FAKE_DEVICE = 'fake_device'
     _FAKE_ID = 'fake_id'
@@ -43,15 +43,15 @@ class TestHyperVSecurityGroupsDriver(base.BaseTestCase):
     _FAKE_PORT_MAX = 9011
 
     def setUp(self):
-        super(TestHyperVSecurityGroupsDriver, self).setUp()
+        super(TestHyperVSecurityGroupsDriverMixin, self).setUp()
         self._mock_windows_version = mock.patch.object(utilsfactory,
                                                        'get_hypervutils')
         self._mock_windows_version.start()
-        self._driver = sg_driver.HyperVSecurityGroupsDriver()
+        self._driver = sg_driver.HyperVSecurityGroupsDriverMixin()
         self._driver._utils = mock.MagicMock()
 
     @mock.patch('hyperv.neutron.security_groups_driver'
-                '.HyperVSecurityGroupsDriver._create_port_rules')
+                '.HyperVSecurityGroupsDriverMixin._create_port_rules')
     def test_prepare_port_filter(self, mock_create_rules):
         mock_port = self._get_port()
         mock_utils_method = self._driver._utils.create_default_reject_all_rules
@@ -82,7 +82,7 @@ class TestHyperVSecurityGroupsDriver(base.BaseTestCase):
                          self._driver._security_ports[new_mock_port['device']])
 
     @mock.patch('hyperv.neutron.security_groups_driver'
-                '.HyperVSecurityGroupsDriver.prepare_port_filter')
+                '.HyperVSecurityGroupsDriverMixin.prepare_port_filter')
     def test_update_port_filter_new_port(self, mock_method):
         mock_port = self._get_port()
         self._driver.prepare_port_filter = mock.MagicMock()
@@ -120,7 +120,7 @@ class TestHyperVSecurityGroupsDriver(base.BaseTestCase):
         self.assertEqual(expected, actual)
 
     @mock.patch('hyperv.neutron.security_groups_driver'
-                '.HyperVSecurityGroupsDriver._create_param_map')
+                '.HyperVSecurityGroupsDriverMixin._create_param_map')
     def test_create_port_rules(self, mock_method):
         fake_rule = self._create_security_rule()
         mock_method.return_value = {

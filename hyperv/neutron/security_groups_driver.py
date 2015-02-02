@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from neutron.agent import firewall
 from neutron.i18n import _LE, _LI
 from neutron.openstack.common import log as logging
 
@@ -23,7 +22,7 @@ from hyperv.neutron import utilsv2
 LOG = logging.getLogger(__name__)
 
 
-class HyperVSecurityGroupsDriver(firewall.FirewallDriver):
+class HyperVSecurityGroupsDriverMixin(object):
     """Security Groups Driver.
 
     Security Groups implementation for Hyper-V VMs.
