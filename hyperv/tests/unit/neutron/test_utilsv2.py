@@ -19,9 +19,9 @@ Unit tests for the Hyper-V utils V2.
 
 import mock
 
-from neutron.plugins.hyperv.agent import utils
-from neutron.plugins.hyperv.agent import utilsv2
-from neutron.tests import base
+from hyperv.neutron import utils
+from hyperv.neutron import utilsv2
+from hyperv.tests import base
 
 
 class TestHyperVUtilsV2(base.BaseTestCase):
@@ -247,7 +247,7 @@ class TestHyperVUtilsV2(base.BaseTestCase):
             self._utils._add_virt_feature.assert_called_with(
                 mock_port, mock_acl)
 
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2'
                 '._get_switch_port_allocation')
     def test_enable_control_metrics_ok(self, mock_get_port_allocation):
         mock_metrics_svc = self._utils._conn.Msvm_MetricService()[0]
@@ -265,7 +265,7 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
         mock_metrics_svc.ControlMetrics.assert_has_calls([m_call, m_call])
 
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2'
                 '._get_switch_port_allocation')
     def test_enable_control_metrics_no_port(self, mock_get_port_allocation):
         mock_metrics_svc = self._utils._conn.Msvm_MetricService()[0]
@@ -274,7 +274,7 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self._utils.enable_control_metrics(self._FAKE_PORT_NAME)
         self.assertEqual(0, mock_metrics_svc.ControlMetrics.call_count)
 
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2'
                 '._get_switch_port_allocation')
     def test_enable_control_metrics_no_def(self, mock_get_port_allocation):
         mock_metrics_svc = self._utils._conn.Msvm_MetricService()[0]
@@ -287,9 +287,8 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self._utils.enable_control_metrics(self._FAKE_PORT_NAME)
         self.assertEqual(0, mock_metrics_svc.ControlMetrics.call_count)
 
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
-                '._is_port_vm_started')
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._is_port_vm_started')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2'
                 '._get_switch_port_allocation')
     def test_can_enable_control_metrics_true(self, mock_get, mock_is_started):
         mock_acl = mock.MagicMock()
@@ -297,9 +296,8 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self._test_can_enable_control_metrics(mock_get, mock_is_started,
                                               [mock_acl, mock_acl], True)
 
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
-                '._is_port_vm_started')
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._is_port_vm_started')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2'
                 '._get_switch_port_allocation')
     def test_can_enable_control_metrics_false(self, mock_get, mock_is_started):
         self._test_can_enable_control_metrics(mock_get, mock_is_started, [],
@@ -343,10 +341,8 @@ class TestHyperVUtilsV2(base.BaseTestCase):
             [self._utils._VM_SUMMARY_ENABLED_STATE],
             [self._FAKE_RES_PATH])
 
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
-                '._remove_virt_feature')
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
-                '._bind_security_rule')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._remove_virt_feature')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._bind_security_rule')
     def test_create_default_reject_all_rules(self, mock_bind, mock_remove):
         (m_port, m_acl) = self._setup_security_rule_test()
         m_acl.Action = self._utils._ACL_ACTION_DENY
@@ -368,10 +364,8 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self._utils._remove_virt_feature.assert_called_once_with(m_acl)
         self._utils._bind_security_rule.assert_has_calls(calls)
 
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
-                '._remove_virt_feature')
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
-                '._bind_security_rule')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._remove_virt_feature')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._bind_security_rule')
     def test_create_default_reject_all_rules_already_added(self, mock_bind,
                                                            mock_remove):
         (m_port, m_acl) = self._setup_security_rule_test()
@@ -383,12 +377,9 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self.assertFalse(self._utils._remove_virt_feature.called)
         self.assertFalse(self._utils._bind_security_rule.called)
 
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
-                '._remove_virt_feature')
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
-                '._add_virt_feature')
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
-                '._create_security_acl')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._remove_virt_feature')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._add_virt_feature')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._create_security_acl')
     def test_bind_security_rule(self, mock_create_acl, mock_add, mock_remove):
         (m_port, m_acl) = self._setup_security_rule_test()
         mock_create_acl.return_value = m_acl
@@ -400,8 +391,7 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
         self._utils._add_virt_feature.assert_called_once_with(m_port, m_acl)
 
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
-                '._remove_virt_feature')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._remove_virt_feature')
     def test_remove_security_rule(self, mock_remove_feature):
         mock_acl = self._setup_security_rule_test()[1]
         self._utils.remove_security_rule(
@@ -409,7 +399,7 @@ class TestHyperVUtilsV2(base.BaseTestCase):
             self._FAKE_LOCAL_PORT, self._FAKE_PROTOCOL, self._FAKE_REMOTE_ADDR)
         self._utils._remove_virt_feature.assert_called_once_with(mock_acl)
 
-    @mock.patch('neutron.plugins.hyperv.agent.utilsv2.HyperVUtilsV2'
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2'
                 '._remove_multiple_virt_features')
     def test_remove_all_security_rules(self, mock_remove_feature):
         mock_acl = self._setup_security_rule_test()[1]

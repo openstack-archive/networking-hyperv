@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from neutron.plugins.hyperv.agent import utils
+from hyperv.neutron import utils
 
 
 class HyperVUtilsV2(utils.HyperVUtils):

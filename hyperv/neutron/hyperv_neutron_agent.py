@@ -36,9 +36,10 @@ from neutron.i18n import _LE, _LI
 from neutron.openstack.common import log as logging
 from neutron.openstack.common import loopingcall
 from neutron.plugins.common import constants as p_const
-from neutron.plugins.hyperv.agent import utils
-from neutron.plugins.hyperv.agent import utilsfactory
-from neutron.plugins.hyperv.common import constants
+
+from hyperv.neutron import constants
+from hyperv.neutron import utils
+from hyperv.neutron import utilsfactory
 
 LOG = logging.getLogger(__name__)
 

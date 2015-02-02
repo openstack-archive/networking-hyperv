@@ -21,10 +21,10 @@ import mock
 
 from oslo.config import cfg
 
-from neutron.plugins.hyperv.agent import utils
-from neutron.plugins.hyperv.agent import utilsfactory
-from neutron.plugins.hyperv.agent import utilsv2
-from neutron.tests import base
+from hyperv.neutron import utils
+from hyperv.neutron import utilsfactory
+from hyperv.neutron import utilsv2
+from hyperv.tests import base
 
 CONF = cfg.CONF
 

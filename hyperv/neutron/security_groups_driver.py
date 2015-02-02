@@ -16,8 +16,9 @@
 from neutron.agent import firewall
 from neutron.i18n import _LE, _LI
 from neutron.openstack.common import log as logging
-from neutron.plugins.hyperv.agent import utilsfactory
-from neutron.plugins.hyperv.agent import utilsv2
+
+from hyperv.neutron import utilsfactory
+from hyperv.neutron import utilsv2
 
 LOG = logging.getLogger(__name__)
 

@@ -20,9 +20,9 @@ Unit tests for the Hyper-V Security Groups Driver.
 import mock
 from oslo.config import cfg
 
-from neutron.plugins.hyperv.agent import security_groups_driver as sg_driver
-from neutron.plugins.hyperv.agent import utilsfactory
-from neutron.tests import base
+from hyperv.neutron import security_groups_driver as sg_driver
+from hyperv.neutron import utilsfactory
+from hyperv.tests import base
 
 CONF = cfg.CONF
 
@@ -50,7 +50,7 @@ class TestHyperVSecurityGroupsDriver(base.BaseTestCase):
         self._driver = sg_driver.HyperVSecurityGroupsDriver()
         self._driver._utils = mock.MagicMock()
 
-    @mock.patch('neutron.plugins.hyperv.agent.security_groups_driver'
+    @mock.patch('hyperv.neutron.security_groups_driver'
                 '.HyperVSecurityGroupsDriver._create_port_rules')
     def test_prepare_port_filter(self, mock_create_rules):
         mock_port = self._get_port()
@@ -81,7 +81,7 @@ class TestHyperVSecurityGroupsDriver(base.BaseTestCase):
         self.assertEqual(new_mock_port,
                          self._driver._security_ports[new_mock_port['device']])
 
-    @mock.patch('neutron.plugins.hyperv.agent.security_groups_driver'
+    @mock.patch('hyperv.neutron.security_groups_driver'
                 '.HyperVSecurityGroupsDriver.prepare_port_filter')
     def test_update_port_filter_new_port(self, mock_method):
         mock_port = self._get_port()
@@ -119,7 +119,7 @@ class TestHyperVSecurityGroupsDriver(base.BaseTestCase):
 
         self.assertEqual(expected, actual)
 
-    @mock.patch('neutron.plugins.hyperv.agent.security_groups_driver'
+    @mock.patch('hyperv.neutron.security_groups_driver'
                 '.HyperVSecurityGroupsDriver._create_param_map')
     def test_create_port_rules(self, mock_method):
         fake_rule = self._create_security_rule()

@@ -19,8 +19,9 @@ from oslo.config import cfg
 
 from neutron.i18n import _LW
 from neutron.openstack.common import log as logging
-from neutron.plugins.hyperv.agent import utils
-from neutron.plugins.hyperv.agent import utilsv2
+
+from hyperv.neutron import utils
+from hyperv.neutron import utilsv2
 
 # Check needed for unit testing on Unix
 if sys.platform == 'win32':
