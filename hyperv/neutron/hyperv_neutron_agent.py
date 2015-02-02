@@ -17,9 +17,9 @@
 import re
 import time
 
-from neutron.i18n import _LE, _LI
 from neutron.openstack.common import log as logging
 
+from hyperv.common.i18n import _LE, _LI
 from hyperv.neutron import constants
 from hyperv.neutron import utils
 from hyperv.neutron import utilsfactory

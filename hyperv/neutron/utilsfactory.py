@@ -17,9 +17,9 @@ import sys
 
 from oslo.config import cfg
 
-from neutron.i18n import _LW
 from neutron.openstack.common import log as logging
 
+from hyperv.common.i18n import _LW
 from hyperv.neutron import utils
 from hyperv.neutron import utilsv2
 
