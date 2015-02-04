@@ -20,7 +20,7 @@ import time
 from oslo.config import cfg
 from oslo.utils import excutils
 
-from neutron.openstack.common import log as logging
+from cloudbase.common import log as logging
 
 # Check needed for unit testing on Unix
 if sys.platform == 'win32':
