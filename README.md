@@ -1,1 +1,0 @@
-# python-neutron-plugin-hyperv
