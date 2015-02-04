@@ -18,8 +18,8 @@ import sys
 import time
 
 from oslo.config import cfg
+from oslo.utils import excutils
 
-from neutron.common import exceptions as n_exc
 from neutron.openstack.common import log as logging
 
 # Check needed for unit testing on Unix
@@ -30,8 +30,26 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class HyperVException(n_exc.NeutronException):
-    message = _('HyperVException: %(msg)s')
+class HyperVException(Exception):
+    """Base Hyper-V Exception.
+
+    To correctly use this class, inherit from it and define
+    a 'message' property. That message will get printf'd
+    with the keyword arguments provided to the constructor.
+    """
+    message = 'Hyper-V Exception: %(msg)s'
+
+    def __init__(self, **kwargs):
+        try:
+            super(HyperVException, self).__init__(self.message % kwargs)
+            self.msg = self.message % kwargs
+        except Exception:
+            with excutils.save_and_reraise_exception() as ctxt:
+                if not self.use_fatal_exceptions():
+                    ctxt.reraise = False
+                    # at least get the core message out if something happened
+                    super(HyperVException, self).__init__(self.message)
+
 
 WMI_JOB_STATE_STARTED = 4096
 WMI_JOB_STATE_RUNNING = 4
