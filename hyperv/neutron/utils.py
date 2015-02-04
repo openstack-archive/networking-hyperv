@@ -59,6 +59,10 @@ WMI_JOB_STATE_COMPLETED = 7
 class HyperVUtils(object):
 
     _ETHERNET_SWITCH_PORT = 'Msvm_SwitchPort'
+    _SWITCH_LAN_ENDPOINT = 'Msvm_SwitchLanEndpoint'
+    _VIRTUAL_SWITCH = 'Msvm_VirtualSwitch'
+    _BINDS_TO = 'Msvm_BindsTo'
+    _VLAN_ENDPOINT_SET_DATA = 'Msvm_VLANEndpointSettingData'
 
     _wmi_namespace = '//./root/virtualization'
 
@@ -225,17 +229,36 @@ class HyperVUtils(object):
                                   vswitch_name)
         return vswitch[0]
 
-    def _get_vswitch_external_port(self, vswitch):
-        vswitch_ports = vswitch.associators(
-            wmi_result_class=self._ETHERNET_SWITCH_PORT)
-        for vswitch_port in vswitch_ports:
-            lan_endpoints = vswitch_port.associators(
+    def _get_vswitch_external_port(self, vswitch_name):
+        ext_ports = self._conn.Msvm_ExternalEthernetPort()
+        for ext_port in ext_ports:
+            lan_endpoint_list = ext_port.associators(
                 wmi_result_class='Msvm_SwitchLanEndpoint')
-            if lan_endpoints:
-                ext_port = lan_endpoints[0].associators(
-                    wmi_result_class='Msvm_ExternalEthernetPort')
-                if ext_port:
-                    return vswitch_port
+            if lan_endpoint_list:
+                vswitch_port_list = lan_endpoint_list[0].associators(
+                    wmi_result_class=self._ETHERNET_SWITCH_PORT)
+                if vswitch_port_list:
+                    vswitch_port = vswitch_port_list[0]
+                    vswitch_list = vswitch_port.associators(
+                        wmi_result_class='Msvm_VirtualSwitch')
+                    if (vswitch_list and
+                            vswitch_list[0].ElementName == vswitch_name):
+                        return vswitch_port
+
+    def set_switch_external_port_trunk_vlan(self, vswitch_name, vlan_id,
+                                            desired_endpoint_mode):
+        vswitch_external_port = self._get_vswitch_external_port(vswitch_name)
+        if vswitch_external_port:
+            vlan_endpoint = vswitch_external_port.associators(
+                wmi_association_class=self._BINDS_TO)[0]
+            if vlan_endpoint.DesiredEndpointMode != desired_endpoint_mode:
+                vlan_endpoint.DesiredEndpointMode = desired_endpoint_mode
+                vlan_endpoint.put()
+            vlan_endpoint_settings = vlan_endpoint.associators(
+                wmi_result_class=self._VLAN_ENDPOINT_SET_DATA)[0]
+            if vlan_id not in vlan_endpoint_settings.TrunkedVLANList:
+                vlan_endpoint_settings.TrunkedVLANList += (vlan_id,)
+                vlan_endpoint_settings.put()
 
     def set_vswitch_port_vlan_id(self, vlan_id, switch_port_name):
         vlan_endpoint_settings = self._conn.Msvm_VLANEndpointSettingData(

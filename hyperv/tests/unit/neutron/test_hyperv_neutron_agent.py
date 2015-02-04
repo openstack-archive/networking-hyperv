@@ -20,7 +20,9 @@ Unit tests for Windows Hyper-V virtual switch neutron driver
 
 import mock
 
+from hyperv.neutron import constants
 from hyperv.neutron import hyperv_neutron_agent
+from hyperv.neutron import utils
 from hyperv.neutron import utilsfactory
 from hyperv.tests import base
 
@@ -41,6 +43,60 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent.sec_groups_agent = mock.MagicMock()
         self.agent.context = mock.Mock()
         self.agent.agent_id = mock.Mock()
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       "_get_vswitch_name")
+    def test_provision_network_exception(self, mock_get_vswitch_name):
+        self.assertRaises(utils.HyperVException, self.agent._provision_network,
+                          mock.sentinel.FAKE_PORT_ID,
+                          mock.sentinel.FAKE_NET_UUID,
+                          mock.sentinel.FAKE_NETWORK_TYPE,
+                          mock.sentinel.FAKE_PHYSICAL_NETWORK,
+                          mock.sentinel.FAKE_SEGMENTATION_ID)
+        mock_get_vswitch_name.assert_called_once_with(
+            mock.sentinel.FAKE_NETWORK_TYPE,
+            mock.sentinel.FAKE_PHYSICAL_NETWORK)
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       "_get_vswitch_name")
+    def test_provision_network_vlan(self, mock_get_vswitch_name):
+        vswitch_name = mock_get_vswitch_name.return_value
+        self.agent._provision_network(mock.sentinel.FAKE_PORT_ID,
+                                      mock.sentinel.FAKE_NET_UUID,
+                                      constants.TYPE_VLAN,
+                                      mock.sentinel.FAKE_PHYSICAL_NETWORK,
+                                      mock.sentinel.FAKE_SEGMENTATION_ID)
+        mock_get_vswitch_name.assert_called_once_with(
+            constants.TYPE_VLAN,
+            mock.sentinel.FAKE_PHYSICAL_NETWORK)
+        set_switch = self.agent._utils.set_switch_external_port_trunk_vlan
+        set_switch.assert_called_once_with(vswitch_name,
+                                           mock.sentinel.FAKE_SEGMENTATION_ID,
+                                           constants.TRUNK_ENDPOINT_MODE)
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       "_get_vswitch_name")
+    def test_provision_network_flat(self, mock_get_vswitch_name):
+        self.agent._provision_network(mock.sentinel.FAKE_PORT_ID,
+                                      mock.sentinel.FAKE_NET_UUID,
+                                      constants.TYPE_FLAT,
+                                      mock.sentinel.FAKE_PHYSICAL_NETWORK,
+                                      mock.sentinel.FAKE_SEGMENTATION_ID)
+        mock_get_vswitch_name.assert_called_once_with(
+            constants.TYPE_FLAT,
+            mock.sentinel.FAKE_PHYSICAL_NETWORK)
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       "_get_vswitch_name")
+    def test_provision_network_local(self, mock_get_vswitch_name):
+        self.agent._provision_network(mock.sentinel.FAKE_PORT_ID,
+                                      mock.sentinel.FAKE_NET_UUID,
+                                      constants.TYPE_LOCAL,
+                                      mock.sentinel.FAKE_PHYSICAL_NETWORK,
+                                      mock.sentinel.FAKE_SEGMENTATION_ID)
+        mock_get_vswitch_name.assert_called_once_with(
+            constants.TYPE_LOCAL,
+            mock.sentinel.FAKE_PHYSICAL_NETWORK)
 
     def test_port_bound_enable_metrics(self):
         self.agent.enable_metrics_collection = True

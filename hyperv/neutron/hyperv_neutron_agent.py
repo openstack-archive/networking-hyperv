@@ -141,8 +141,10 @@ networking-plugin-hyperv_agent.html
         LOG.info(_LI("Provisioning network %s"), net_uuid)
 
         vswitch_name = self._get_vswitch_name(network_type, physical_network)
-
-        if network_type in [constants.TYPE_VLAN, constants.TYPE_FLAT]:
+        if network_type == constants.TYPE_VLAN:
+            self._utils.set_switch_external_port_trunk_vlan(vswitch_name,
+                segmentation_id, constants.TRUNK_ENDPOINT_MODE)
+        elif network_type == constants.TYPE_FLAT:
             #Nothing to do
             pass
         elif network_type == constants.TYPE_LOCAL:
