@@ -1,5 +1,5 @@
-neutron-ml2-hyperv
-==================
+networking-hyperv
+=================
 
 This is the downstream Hyper-V Neutron Agent.
 
@@ -11,7 +11,7 @@ Run the following command to install the agent in the system:
 
 ::
 
-    C:\neutron-ml2-hyperv> python setup.py install
+    C:\networking-hyperv> python setup.py install
 
 To properly use the agent, you will have to set the core_plugin in
 ``neutron.conf`` to:
@@ -38,13 +38,13 @@ tests.
 
 ::
 
-    C:\neutron-ml2-hyperv> pip install -r test-requirements.txt
+    C:\networking-hyperv> pip install -r test-requirements.txt
 
 You can run the unit tests with the following command.
 
 ::
 
-    C:\neutron-ml2-hyperv> nosetests cloudbase\tests
+    C:\networking-hyperv> nosetests hyperv\tests
 
 
 HACKING
