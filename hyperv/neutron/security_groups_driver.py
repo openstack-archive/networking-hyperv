@@ -1,5 +1,5 @@
-#Copyright 2014 Cloudbase Solutions SRL
-#All Rights Reserved.
+# Copyright 2014 Cloudbase Solutions SRL
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from hyperv.common.i18n import _LE, _LI
+from hyperv.common.i18n import _LE, _LI  # noqa
 from hyperv.common import log as logging
 from hyperv.neutron import utilsfactory
 from hyperv.neutron import utilsv2

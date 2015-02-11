@@ -1,6 +1,6 @@
-#Copyright 2013 Cloudbase Solutions SRL
-#Copyright 2013 Pedro Navarro Perez
-#All Rights Reserved.
+# Copyright 2013 Cloudbase Solutions SRL
+# Copyright 2013 Pedro Navarro Perez
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -17,7 +17,7 @@
 import re
 import time
 
-from hyperv.common.i18n import _LE, _LI
+from hyperv.common.i18n import _, _LE, _LI  # noqa
 from hyperv.common import log as logging
 from hyperv.neutron import constants
 from hyperv.neutron import utils
@@ -142,14 +142,14 @@ networking-plugin-hyperv_agent.html
 
         vswitch_name = self._get_vswitch_name(network_type, physical_network)
         if network_type == constants.TYPE_VLAN:
-            self._utils.set_switch_external_port_trunk_vlan(vswitch_name,
-                segmentation_id, constants.TRUNK_ENDPOINT_MODE)
+            self._utils.set_switch_external_port_trunk_vlan(
+                vswitch_name, segmentation_id, constants.TRUNK_ENDPOINT_MODE)
         elif network_type == constants.TYPE_FLAT:
-            #Nothing to do
+            # Nothing to do
             pass
         elif network_type == constants.TYPE_LOCAL:
-            #TODO(alexpilotti): Check that the switch type is private
-            #or create it if not existing
+            # TODO(alexpilotti): Check that the switch type is private
+            # or create it if not existing
             pass
         else:
             raise utils.HyperVException(
@@ -193,10 +193,10 @@ networking-plugin-hyperv_agent.html
                 segmentation_id,
                 port_id)
         elif network_type == constants.TYPE_FLAT:
-            #Nothing to do
+            # Nothing to do
             pass
         elif network_type == constants.TYPE_LOCAL:
-            #Nothing to do
+            # Nothing to do
             pass
         else:
             LOG.error(_LE('Unsupported network type %s'), network_type)
@@ -361,4 +361,3 @@ networking-plugin-hyperv_agent.html
                           "(%(polling_interval)s vs. %(elapsed)s)",
                           {'polling_interval': self._polling_interval,
                            'elapsed': elapsed})
-

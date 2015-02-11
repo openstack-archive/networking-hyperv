@@ -17,7 +17,7 @@ import sys
 
 from oslo.config import cfg
 
-from hyperv.common.i18n import _LW
+from hyperv.common.i18n import _, _LW  # noqa
 from hyperv.common import log as logging
 from hyperv.neutron import utils
 from hyperv.neutron import utilsv2

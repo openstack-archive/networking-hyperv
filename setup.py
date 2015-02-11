@@ -27,6 +27,4 @@ except ImportError:
 
 setuptools.setup(
     setup_requires=['pbr'],
-    packages=setuptools.find_packages(exclude=["*.tests", "*.tests.*",
-                                               "tests.*", "tests"]),
     pbr=True)

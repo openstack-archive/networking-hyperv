@@ -20,7 +20,8 @@ import time
 from oslo.config import cfg
 from oslo.utils import excutils
 
-from cloudbase.common import log as logging
+from hyperv.common.i18n import _  # noqa
+from hyperv.common import log as logging
 
 # Check needed for unit testing on Unix
 if sys.platform == 'win32':

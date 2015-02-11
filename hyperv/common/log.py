@@ -46,8 +46,8 @@ from six import moves
 
 _PY26 = sys.version_info[0:2] == (2, 6)
 
-from cloudbase.common.i18n import _
-from cloudbase.common import local
+from hyperv.common.i18n import _  # noqa
+from hyperv.common import local
 
 
 _DEFAULT_LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"

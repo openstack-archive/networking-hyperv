@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from hyperv.common.i18n import _  # noqa
 from hyperv.neutron import utils
 
 
@@ -247,7 +248,7 @@ class HyperVUtilsV2(utils.HyperVUtils):
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         vmsettings = port.associators(
             wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA)
-        #See http://msdn.microsoft.com/en-us/library/cc160706%28VS.85%29.aspx
+        # See http://msdn.microsoft.com/en-us/library/cc160706%28VS.85%29.aspx
         (ret_val, summary_info) = vs_man_svc.GetSummaryInformation(
             [self._VM_SUMMARY_ENABLED_STATE],
             [v.path_() for v in vmsettings])

@@ -19,7 +19,7 @@ import re
 from hyperv.neutron import constants
 
 
-class HypervMechanismDriver(mech_hyperv.HypervMechanismDriver):
+class HypervMechanismDriver(object):
     """Attach to networks using Hyper-V L2 Agent.
 
     The HypervMechanismDriver integrates the Ml2 Plugin with the

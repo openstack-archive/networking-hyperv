@@ -1,7 +1,17 @@
+=================
 networking-hyperv
 =================
 
-This is the downstream Hyper-V Neutron Agent.
+This project tracks the work to integrate the Hyper-V networking with Neutron. This project contains the Hyper-V Neutron Agent Mixin, Security Groups Driver, ML2 Mechanism Driver and the utils modules they use in order to properly bind neutron ports on a Hyper-V host.
+
+This project resulted from the neutron core vendor decomposition.
+
+Supports Python 2.7 and Python 3.3.
+
+* Free software: Apache license
+* Documentation: http://docs.openstack.org/developer/networking-hyperv
+* Source: http://git.openstack.org/cgit/stackforge/networking-hyperv
+* Bugs: http://bugs.launchpad.net/networking-hyperv
 
 
 How to Install
@@ -57,3 +67,9 @@ To contribute to this repo, please go through the following steps.
 3. Run tests
 4. If the tests pass, create a pull request on our github repo.
 5. Wait for the pull request to be reviewed.
+
+
+Features
+--------
+
+* TODO
