@@ -107,6 +107,9 @@ networking-plugin-hyperv_agent.html
             if port_id in map['ports']:
                 return (network_id, map)
 
+        # if the port was not found, just return (None, None)
+        return (None, None)
+
     def network_delete(self, context, network_id=None):
         LOG.debug("network_delete received. "
                   "Deleting network %s", network_id)
@@ -213,13 +216,14 @@ networking-plugin-hyperv_agent.html
 
     def _port_unbound(self, port_id, vnic_deleted=False):
         (net_uuid, map) = self._get_network_vswitch_map_by_port_id(port_id)
-        if net_uuid not in self._network_vswitch_map:
-            LOG.info(_LI('Network %s is not avalailable on this agent'),
-                     net_uuid)
+
+        if not net_uuid:
+            LOG.debug('Port %s was not found on this agent.', port_id)
             return
 
         LOG.debug("Unbinding port %s", port_id)
         self._utils.disconnect_switch_port(port_id, vnic_deleted, True)
+        map['ports'].remove(port_id)
 
         if not map['ports']:
             self._reclaim_local_network(net_uuid)

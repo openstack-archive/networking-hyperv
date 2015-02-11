@@ -56,6 +56,28 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.assertEqual(expected,
                          self.agent._physical_network_mappings.items())
 
+    def test_get_network_vswitch_map_by_port_id(self):
+        net_uuid = 'net-uuid'
+        self.agent._network_vswitch_map = {
+            net_uuid: {'ports': [self._FAKE_PORT_ID]}
+        }
+
+        network, port_map = self.agent._get_network_vswitch_map_by_port_id(
+            self._FAKE_PORT_ID)
+
+        self.assertEqual(net_uuid, network)
+        self.assertEqual({'ports': [self._FAKE_PORT_ID]}, port_map)
+
+    def test_get_network_vswitch_map_by_port_id_not_found(self):
+        net_uuid = 'net-uuid'
+        self.agent._network_vswitch_map = {net_uuid: {'ports': []}}
+
+        network, port_map = self.agent._get_network_vswitch_map_by_port_id(
+            self._FAKE_PORT_ID)
+
+        self.assertIsNone(network)
+        self.assertIsNone(port_map)
+
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        "_get_vswitch_name")
     def test_provision_network_exception(self, mock_get_vswitch_name):
@@ -133,21 +155,39 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
             self.assertEqual(enable_metrics, mock_enable_metrics.called)
 
-    def test_port_unbound(self):
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_get_network_vswitch_map_by_port_id')
+    def _check_port_unbound(self, mock_get_vswitch_map_by_port_id, ports=None,
+                            net_uuid=None):
         map = {
             'network_type': 'vlan',
             'vswitch_name': 'fake-vswitch',
-            'ports': [],
+            'ports': ports,
             'vlan_id': 1}
-        net_uuid = 'my-net-uuid'
         network_vswitch_map = (net_uuid, map)
-        with mock.patch.object(self.agent,
-                               '_get_network_vswitch_map_by_port_id',
-                               return_value=network_vswitch_map):
-            with mock.patch.object(
-                    self.agent._utils,
-                    'disconnect_switch_port'):
-                self.agent._port_unbound(net_uuid)
+        mock_get_vswitch_map_by_port_id.return_value = network_vswitch_map
+
+        with mock.patch.object(
+                self.agent._utils,
+                'disconnect_switch_port') as mock_disconnect_switch_port:
+            self.agent._port_unbound(self._FAKE_PORT_ID, vnic_deleted=False)
+
+            if net_uuid:
+                mock_disconnect_switch_port.assert_called_once_with(
+                    self._FAKE_PORT_ID, False, True)
+            else:
+                self.assertFalse(mock_disconnect_switch_port.called)
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_reclaim_local_network')
+    def test_port_unbound(self, mock_reclaim_local_network):
+        net_uuid = 'my-net-uuid'
+        self._check_port_unbound(ports=[self._FAKE_PORT_ID],
+                                 net_uuid=net_uuid)
+        mock_reclaim_local_network.assert_called_once_with(net_uuid)
+
+    def test_port_unbound_port_not_found(self):
+        self._check_port_unbound()
 
     def test_port_enable_control_metrics_ok(self):
         self.agent.enable_metrics_collection = True
