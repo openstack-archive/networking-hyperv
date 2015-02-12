@@ -44,6 +44,18 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent.context = mock.Mock()
         self.agent.agent_id = mock.Mock()
 
+    def test_load_physical_network_mappings(self):
+        test_mappings = ['fake_network_1:fake_vswitch',
+                         'fake_network_2:fake_vswitch_2', '*:fake_vswitch_3']
+        expected = [('fake\\_network\\_1', 'fake_vswitch'),
+                    ('fake\\_network\\_2', 'fake_vswitch_2'),
+                    ('.*', 'fake_vswitch_3')]
+
+        self.agent._load_physical_network_mappings(test_mappings)
+
+        self.assertEqual(expected,
+                         self.agent._physical_network_mappings.items())
+
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        "_get_vswitch_name")
     def test_provision_network_exception(self, mock_get_vswitch_name):

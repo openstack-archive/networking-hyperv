@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import re
 import time
 
@@ -77,7 +78,7 @@ networking-plugin-hyperv_agent.html
         self._load_physical_network_mappings(self._phys_net_map)
 
     def _load_physical_network_mappings(self, phys_net_vswitch_mappings):
-        self._physical_network_mappings = {}
+        self._physical_network_mappings = collections.OrderedDict()
         for mapping in phys_net_vswitch_mappings:
             parts = mapping.split(':')
             if len(parts) != 2:
