@@ -39,8 +39,7 @@ class HyperVUtilsTestCase(base.BaseTestCase):
         mock_svc = self.utils._conn.Msvm_VirtualSwitchManagementService()[0]
         mock_get_swp_path.return_value = None
 
-        self.utils.disconnect_switch_port(mock.sentinel.FAKE_VSWITCH_NAME,
-                                          mock.sentinel.FAKE_PORT_NAME,
+        self.utils.disconnect_switch_port(mock.sentinel.FAKE_PORT_NAME,
                                           True, True)
         self.assertFalse(mock_svc.DisconnectSwitchPort.called)
         self.assertFalse(mock_svc.DeleteSwitchPort.called)
@@ -52,8 +51,7 @@ class HyperVUtilsTestCase(base.BaseTestCase):
         mock_svc.DeleteSwitchPort.return_value = (0, )
         mock_get_swp_path.return_value = mock.sentinel.FAKE_PATH
 
-        self.utils.disconnect_switch_port(mock.sentinel.FAKE_VSWITCH_NAME,
-                                          mock.sentinel.FAKE_PORT_NAME,
+        self.utils.disconnect_switch_port(mock.sentinel.FAKE_PORT_NAME,
                                           False, True)
         mock_svc.DisconnectSwitchPort.assert_called_once_with(
             SwitchPort=mock.sentinel.FAKE_PATH)
@@ -66,8 +64,7 @@ class HyperVUtilsTestCase(base.BaseTestCase):
         mock_svc.DeleteSwitchPort.return_value = (0, )
         mock_get_swp_path.return_value = mock.sentinel.FAKE_PATH
 
-        self.utils.disconnect_switch_port(mock.sentinel.FAKE_VSWITCH_NAME,
-                                          mock.sentinel.FAKE_PORT_NAME,
+        self.utils.disconnect_switch_port(mock.sentinel.FAKE_PORT_NAME,
                                           True, True)
 
         self.assertFalse(mock_svc.DisconnectSwitchPort.called)
@@ -83,7 +80,6 @@ class HyperVUtilsTestCase(base.BaseTestCase):
 
         self.assertRaises(utils.HyperVException,
                           self.utils.disconnect_switch_port,
-                          mock.sentinel.FAKE_VSWITCH_NAME,
                           mock.sentinel.FAKE_PORT_NAME,
                           False, True)
 
@@ -98,7 +94,6 @@ class HyperVUtilsTestCase(base.BaseTestCase):
 
         self.assertRaises(utils.HyperVException,
                           self.utils.disconnect_switch_port,
-                          mock.sentinel.FAKE_VSWITCH_NAME,
                           mock.sentinel.FAKE_PORT_NAME,
                           True, True)
 
