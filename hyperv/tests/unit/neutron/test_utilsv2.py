@@ -73,6 +73,7 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self._utils._get_switch_port_allocation = mock.MagicMock()
 
         mock_port = mock.MagicMock()
+        mock_port.HostResource = []
         self._utils._get_switch_port_allocation.return_value = (mock_port,
                                                                 found)
 
@@ -84,6 +85,16 @@ class TestHyperVUtilsV2(base.BaseTestCase):
                                                               mock_port)
         else:
             self._utils._modify_virt_resource.assert_called_with(mock_port)
+
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_modify_virt_resource')
+    def test_connect_vnic_to_vswitch_already_connected(self, mock_modify_res):
+        mock_port = self._mock_get_switch_port_alloc()
+        mock_port.HostResource = [mock.sentinel.vswitch_path]
+
+        self._utils.connect_vnic_to_vswitch(mock.sentinel.switch_name,
+                                            mock.sentinel.port_name)
+
+        self.assertFalse(mock_modify_res.called)
 
     def test_add_virt_resource(self):
         self._test_virt_method('AddResourceSettings', 3, '_add_virt_resource',
@@ -140,6 +151,14 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self._utils._check_job_status = mock.MagicMock()
 
         return mock_res_setting_data
+
+    def _mock_get_switch_port_alloc(self, found=True):
+        mock_port = mock.MagicMock()
+        patched = mock.patch.object(self._utils, '_get_switch_port_allocation',
+                                    return_value=(mock_port, found))
+        patched.start()
+        self.addCleanup(patched.stop)
+        return mock_port
 
     def test_disconnect_switch_port_delete_port(self):
         self._test_disconnect_switch_port(True)
@@ -202,6 +221,21 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
         self.assertTrue(mock_svc.RemoveFeatureSettings.called)
         self.assertTrue(mock_svc.AddFeatureSettings.called)
+
+    @mock.patch.object(utilsv2.HyperVUtilsV2,
+                       '_get_vlan_setting_data_from_port_alloc')
+    def test_set_vswitch_port_vlan_id_already_set(self, mock_get_vlan_sd):
+        self._mock_get_switch_port_alloc()
+        mock_get_vlan_sd.return_value = mock.MagicMock(
+            AccessVlanId=mock.sentinel.vlan_id,
+            OperationMode=self._utils._OPERATION_MODE_ACCESS)
+
+        self._utils.set_vswitch_port_vlan_id(mock.sentinel.vlan_id,
+                                             mock.sentinel.port_name)
+
+        mock_svc = self._utils._conn.Msvm_VirtualSystemManagementService()[0]
+        self.assertFalse(mock_svc.RemoveFeatureSettings.called)
+        self.assertFalse(mock_svc.AddFeatureSettings.called)
 
     def test_get_setting_data(self):
         self._utils._get_first_item = mock.MagicMock(return_value=None)
