@@ -45,6 +45,8 @@ class HyperVSecurityGroupsDriverMixin(object):
 
     def __init__(self):
         self._utils = utilsfactory.get_hypervutils()
+        self._sg_gen = SecurityGroupRuleGeneratorR2()
+        self._sec_group_rules = {}
         self._security_ports = {}
 
     def prepare_port_filter(self, port):
@@ -53,49 +55,52 @@ class HyperVSecurityGroupsDriverMixin(object):
         # newly created port, add default rules.
         if port['device'] not in self._security_ports:
             LOG.debug('Creating default reject rules.')
-            self._utils.create_default_reject_all_rules(port['id'])
+            self._utils.remove_all_security_rules(port['id'])
+            self._sec_group_rules[port['id']] = []
+
+            def_sg_rules = self._sg_gen.create_default_sg_rules()
+            self._add_sg_port_rules(port['id'], def_sg_rules)
 
         self._security_ports[port['device']] = port
         self._create_port_rules(port['id'], port['security_group_rules'])
 
     def _create_port_rules(self, port_id, rules):
-        for rule in rules:
+        sg_rules = self._sg_gen.create_security_group_rules(rules)
+        old_sg_rules = self._sec_group_rules[port_id]
+        add, rm = self._sg_gen.compute_new_rules_add(old_sg_rules, sg_rules)
+
+        self._remove_sg_port_rules(port_id, list(set(rm)))
+        self._add_sg_port_rules(port_id, list(set(add)))
+
+    def _remove_port_rules(self, port_id, rules):
+        sg_rules = self._sg_gen.create_security_group_rules(rules)
+        self._remove_sg_port_rules(port_id, list(set(sg_rules)))
+
+    def _add_sg_port_rules(self, port_id, sg_rules):
+        old_sg_rules = self._sec_group_rules[port_id]
+        for rule in sg_rules:
             # yielding to other threads that must run (like state reporting)
             greenthread.sleep()
-            param_map = self._create_param_map(rule)
             try:
-                self._utils.create_security_rule(port_id, **param_map)
+                self._utils.create_security_rule(port_id, rule)
+                old_sg_rules.append(rule)
             except Exception as ex:
                 LOG.error(_LE('Hyper-V Exception: %(hyperv_exeption)s while '
                               'adding rule: %(rule)s'),
                           dict(hyperv_exeption=ex, rule=rule))
 
-    def _remove_port_rules(self, port_id, rules):
-        for rule in rules:
+    def _remove_sg_port_rules(self, port_id, sg_rules):
+        old_sg_rules = self._sec_group_rules[port_id]
+        for rule in sg_rules:
             # yielding to other threads that must run (like state reporting)
             greenthread.sleep()
-            param_map = self._create_param_map(rule)
             try:
-                self._utils.remove_security_rule(port_id, **param_map)
+                self._utils.remove_security_rule(port_id, rule)
+                old_sg_rules.remove(rule)
             except Exception as ex:
                 LOG.error(_LE('Hyper-V Exception: %(hyperv_exeption)s while '
                               'removing rule: %(rule)s'),
                           dict(hyperv_exeption=ex, rule=rule))
-
-    def _create_param_map(self, rule):
-        if 'port_range_min' in rule and 'port_range_max' in rule:
-            local_port = '%s-%s' % (rule['port_range_min'],
-                                    rule['port_range_max'])
-        else:
-            local_port = ACL_PROP_MAP['default']
-
-        return {
-            'direction': ACL_PROP_MAP['direction'][rule['direction']],
-            'acl_type': ACL_PROP_MAP['ethertype'][rule['ethertype']],
-            'local_port': local_port,
-            'protocol': self._get_rule_protocol(rule),
-            'remote_address': self._get_rule_remote_address(rule)
-        }
 
     def apply_port_filter(self, port):
         LOG.info(_LI('Aplying port filter.'))
@@ -126,32 +131,11 @@ class HyperVSecurityGroupsDriverMixin(object):
     def remove_port_filter(self, port):
         LOG.info(_LI('Removing port filter'))
         self._security_ports.pop(port['device'], None)
+        self._sec_group_rules.pop(port['id'], None)
 
     @property
     def ports(self):
         return self._security_ports
-
-    def _get_rule_remote_address(self, rule):
-        if rule['direction'] == 'ingress':
-            ip_prefix = 'source_ip_prefix'
-        else:
-            ip_prefix = 'dest_ip_prefix'
-
-        if ip_prefix in rule:
-            return rule[ip_prefix]
-        return ACL_PROP_MAP['address_default'][rule['ethertype']]
-
-    def _get_rule_protocol(self, rule):
-        protocol = self._get_rule_prop_or_default(rule, 'protocol')
-        if protocol in ACL_PROP_MAP['protocol'].keys():
-            return ACL_PROP_MAP['protocol'][protocol]
-
-        return protocol
-
-    def _get_rule_prop_or_default(self, rule, prop):
-        if prop in rule:
-            return rule[prop]
-        return ACL_PROP_MAP['default']
 
 
 class SecurityGroupRuleGenerator(object):
@@ -167,7 +151,7 @@ class SecurityGroupRuleGenerator(object):
         pass
 
     def _get_rule_remote_address(self, rule):
-        if rule['direction'] is 'ingress':
+        if rule['direction'] == 'ingress':
             ip_prefix = 'source_ip_prefix'
         else:
             ip_prefix = 'dest_ip_prefix'

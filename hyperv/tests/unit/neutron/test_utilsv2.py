@@ -335,71 +335,72 @@ class TestHyperVUtilsV2(base.BaseTestCase):
             [self._utils._VM_SUMMARY_ENABLED_STATE],
             [self._FAKE_RES_PATH])
 
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._remove_virt_feature')
     @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._bind_security_rule')
-    def test_create_default_reject_all_rules(self, mock_bind, mock_remove):
+    def test_create_security_rule(self, mock_bind):
         (m_port, m_acl) = self._setup_security_rule_test()
-        m_acl.Action = self._utils._ACL_ACTION_DENY
-        self._utils.create_default_reject_all_rules(self._FAKE_PORT_NAME)
+        fake_rule = mock.MagicMock()
 
-        calls = []
-        ipv4_pair = (self._utils._ACL_TYPE_IPV4, self._utils._IPV4_ANY)
-        ipv6_pair = (self._utils._ACL_TYPE_IPV6, self._utils._IPV6_ANY)
-        for direction in [self._utils._ACL_DIR_IN, self._utils._ACL_DIR_OUT]:
-            for acl_type, address in [ipv4_pair, ipv6_pair]:
-                for protocol in [self._utils._TCP_PROTOCOL,
-                                 self._utils._UDP_PROTOCOL,
-                                 self._utils._ICMP_PROTOCOL]:
-                    calls.append(mock.call(m_port, direction, acl_type,
-                                           self._utils._ACL_ACTION_DENY,
-                                           self._utils._ACL_DEFAULT,
-                                           protocol, address, mock.ANY))
+        self._utils.create_security_rule(self._FAKE_PORT_NAME, fake_rule)
+        mock_bind.assert_called_once_with(m_port, fake_rule)
 
-        self._utils._remove_virt_feature.assert_called_once_with(m_acl)
-        self._utils._bind_security_rule.assert_has_calls(calls)
-
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._remove_virt_feature')
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._bind_security_rule')
-    def test_create_default_reject_all_rules_already_added(self, mock_bind,
-                                                           mock_remove):
-        (m_port, m_acl) = self._setup_security_rule_test()
-        m_acl.Action = self._utils._ACL_ACTION_DENY
-        m_port.associators.return_value = [
-            m_acl] * self._utils._REJECT_ACLS_COUNT
-        self._utils.create_default_reject_all_rules(self._FAKE_PORT_NAME)
-
-        self.assertFalse(self._utils._remove_virt_feature.called)
-        self.assertFalse(self._utils._bind_security_rule.called)
-
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._remove_virt_feature')
     @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._add_virt_feature')
     @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._create_security_acl')
-    def test_bind_security_rule(self, mock_create_acl, mock_add, mock_remove):
-        (m_port, m_acl) = self._setup_security_rule_test()
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._get_new_weight')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._filter_security_acls')
+    def test_bind_security_rule(self, mock_filtered_acls, mock_get_weight,
+                                mock_create_acl, mock_add):
+        m_port = mock.MagicMock()
+        m_acl = mock.MagicMock()
+        m_port.associators.return_value = [m_acl]
+        mock_filtered_acls.return_value = []
+        mock_get_weight.return_value = mock.sentinel.FAKE_WEIGHT
         mock_create_acl.return_value = m_acl
+        fake_rule = mock.MagicMock()
 
-        self._utils._bind_security_rule(
-            m_port, self._FAKE_ACL_DIR, self._FAKE_ACL_TYPE,
-            self._FAKE_ACL_ACT, self._FAKE_LOCAL_PORT, self._FAKE_PROTOCOL,
-            self._FAKE_REMOTE_ADDR, self._FAKE_WEIGHT)
+        self._utils._bind_security_rule(m_port, fake_rule)
 
+        mock_filtered_acls.assert_called_once_with(fake_rule, [m_acl])
+        mock_get_weight.assert_called_once_with(fake_rule, [m_acl])
+        mock_create_acl.assert_called_once_with(fake_rule,
+                                                mock.sentinel.FAKE_WEIGHT)
         self._utils._add_virt_feature.assert_called_once_with(m_port, m_acl)
+
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._get_new_weight')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._filter_security_acls')
+    def test_bind_security_rule_existent(self, mock_filtered_acls,
+                                         mock_get_weight):
+        m_port = mock.MagicMock()
+        m_acl = mock.MagicMock()
+        m_port.associators.return_value = [m_acl]
+        mock_filtered_acls.return_value = [m_acl]
+        fake_rule = mock.MagicMock()
+
+        self._utils._bind_security_rule(m_port, fake_rule)
+        mock_filtered_acls.assert_called_once_with(fake_rule, [m_acl])
+        self.assertFalse(mock_get_weight.called)
 
     @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._remove_virt_feature')
     def test_remove_security_rule(self, mock_remove_feature):
         mock_acl = self._setup_security_rule_test()[1]
-        self._utils.remove_security_rule(
-            self._FAKE_PORT_NAME, self._FAKE_ACL_DIR, self._FAKE_ACL_TYPE,
-            self._FAKE_LOCAL_PORT, self._FAKE_PROTOCOL, self._FAKE_REMOTE_ADDR)
+        fake_rule = mock.MagicMock()
+        self._utils.remove_security_rule(self._FAKE_PORT_NAME, fake_rule)
         self._utils._remove_virt_feature.assert_called_once_with(mock_acl)
 
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2'
-                '._remove_multiple_virt_features')
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_remove_multiple_virt_features')
     def test_remove_all_security_rules(self, mock_remove_feature):
         mock_acl = self._setup_security_rule_test()[1]
         self._utils.remove_all_security_rules(self._FAKE_PORT_NAME)
         self._utils._remove_multiple_virt_features.assert_called_once_with(
             [mock_acl])
+
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_get_default_setting_data')
+    def test_create_security_acl(self, mock_get_set_data):
+        mock_acl = mock_get_set_data.return_value
+        fake_rule = mock.MagicMock()
+        fake_rule.to_dict.return_value = {"Action": self._FAKE_ACL_ACT}
+
+        self._utils._create_security_acl(fake_rule, self._FAKE_WEIGHT)
+        mock_acl.set.assert_called_once_with(Action=self._FAKE_ACL_ACT)
 
     def _setup_security_rule_test(self):
         mock_port = self._mock_get_switch_port_alloc()
@@ -431,166 +432,50 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
 
 class TestHyperVUtilsV2R2(base.BaseTestCase):
-    _FAKE_ACL_ACT = 'fake_acl_action'
-    _FAKE_ACL_DIR = 'fake_direction'
-    _FAKE_ACL_TYPE = 'fake_acl_type'
-    _FAKE_LOCAL_PORT = 'fake_local_port'
-    _FAKE_PROTOCOL = 'fake_port_protocol'
-    _FAKE_REMOTE_ADDR = '10.0.0.0/0'
 
     def setUp(self):
         super(TestHyperVUtilsV2R2, self).setUp()
         self._utils = utilsv2.HyperVUtilsV2R2()
 
-    @mock.patch.object(utilsv2.HyperVUtilsV2, 'create_security_rule')
-    def _check_create_security_group_rule(self, mock_super_create_sec_rule,
-                                          is_any_protocol=True):
-        if is_any_protocol:
-            protocol = self._utils._ACL_DEFAULT
-            expected_proto = [self._utils._ICMP_PROTOCOL,
-                              self._utils._TCP_PROTOCOL,
-                              self._utils._UDP_PROTOCOL]
-        else:
-            protocol = self._utils._TCP_PROTOCOL
-            expected_proto = [self._utils._TCP_PROTOCOL]
-
-        self._utils.create_security_rule(
-            mock.sentinel.switch_port_name, mock.sentinel.direction,
-            mock.sentinel.acl_type, mock.sentinel.local_port,
-            protocol, mock.sentinel.remote_address)
-
-        fake_calls = [mock.call(
-            mock.sentinel.switch_port_name, mock.sentinel.direction,
-            mock.sentinel.acl_type, mock.sentinel.local_port,
-            proto, mock.sentinel.remote_address) for proto in expected_proto]
-
-        mock_super_create_sec_rule.assert_has_calls(fake_calls)
-
-    def test_create_security_group_rule_any(self):
-        self._check_create_security_group_rule()
-
-    def test_create_security_group_rule_tcp(self):
-        self._check_create_security_group_rule(is_any_protocol=False)
-
-    @mock.patch.object(utilsv2.HyperVUtilsV2, 'remove_security_rule')
-    def _check_remove_security_group_rule(self, mock_super_remove_sec_rule,
-                                          is_any_protocol=True):
-        if is_any_protocol:
-            protocol = self._utils._ACL_DEFAULT
-            expected_proto = [self._utils._ICMP_PROTOCOL,
-                              self._utils._TCP_PROTOCOL,
-                              self._utils._UDP_PROTOCOL]
-        else:
-            protocol = self._utils._TCP_PROTOCOL
-            expected_proto = [self._utils._TCP_PROTOCOL]
-
-        self._utils.remove_security_rule(
-            mock.sentinel.switch_port_name, mock.sentinel.direction,
-            mock.sentinel.acl_type, mock.sentinel.local_port,
-            protocol, mock.sentinel.remote_address)
-
-        fake_calls = [mock.call(
-            mock.sentinel.switch_port_name, mock.sentinel.direction,
-            mock.sentinel.acl_type, mock.sentinel.local_port,
-            proto, mock.sentinel.remote_address) for proto in expected_proto]
-
-        mock_super_remove_sec_rule.assert_has_calls(fake_calls)
-
-    def test_remove_security_group_rule_any(self):
-        self._check_remove_security_group_rule()
-
-    def test_remove_security_group_rule_tcp(self):
-        self._check_remove_security_group_rule(is_any_protocol=False)
-
     @mock.patch.object(utilsv2.HyperVUtilsV2R2, '_get_default_setting_data')
-    def _check_create_security_acl(self, mock_get_default_set_data, protocol,
-                                   action, expected_local_port=None,
-                                   expected_stateful=False):
-        if expected_local_port is None:
-            expected_local_port = self._FAKE_LOCAL_PORT
+    def test_create_security_acl(self, mock_get_default_setting_data):
+        sg_rule = mock.MagicMock()
+        sg_rule.to_dict.return_value = {}
 
-        mock_acl = mock_get_default_set_data.return_value
+        acl = self._utils._create_security_acl(sg_rule, mock.sentinel.weight)
 
-        self._utils._create_security_acl(
-            mock.sentinel.direction, mock.sentinel.acl_type, action,
-            self._FAKE_LOCAL_PORT, protocol, mock.sentinel.remote_addr,
-            mock.sentinel.weight)
-
-        mock_acl.set.assert_called_once_with(
-            Direction=mock.sentinel.direction,
-            Action=action,
-            LocalPort=expected_local_port,
-            Protocol=protocol,
-            RemoteIPAddress=mock.sentinel.remote_addr,
-            IdleSessionTimeout=0,
-            Stateful=expected_stateful,
-            Weight=mock.sentinel.weight)
-
-    def test_create_security_acl_deny(self):
-        self._check_create_security_acl(protocol=self._utils._TCP_PROTOCOL,
-                                        action=self._utils._ACL_ACTION_DENY)
-
-    def test_create_security_acl_icmp(self):
-        self._check_create_security_acl(protocol=self._utils._ICMP_PROTOCOL,
-                                        action=self._utils._ACL_ACTION_ALLOW,
-                                        expected_local_port='')
-
-    def test_create_security_acl_allow_tcp(self):
-        self._check_create_security_acl(protocol=self._utils._TCP_PROTOCOL,
-                                        action=self._utils._ACL_ACTION_ALLOW,
-                                        expected_stateful=True)
-
-    def test_filter_security_acls(self):
-        self._test_filter_security_acls(
-            self._FAKE_LOCAL_PORT, self._FAKE_PROTOCOL, self._FAKE_REMOTE_ADDR)
-
-    def test_filter_security_acls_default(self):
-        default = self._utils._ACL_DEFAULT
-        self._test_filter_security_acls(
-            default, default, self._FAKE_REMOTE_ADDR)
-
-    def _test_filter_security_acls(self, local_port, protocol, remote_addr):
-        acls = []
-        default = self._utils._ACL_DEFAULT
-        for port, proto in [(default, default), (local_port, protocol)]:
-            mock_acl = mock.MagicMock()
-            mock_acl.Action = self._utils._ACL_ACTION_ALLOW
-            mock_acl.Direction = self._FAKE_ACL_DIR
-            mock_acl.LocalPort = port
-            mock_acl.Protocol = proto
-            mock_acl.RemoteIPAddress = remote_addr
-            acls.append(mock_acl)
-
-        right_acls = [a for a in acls if a.LocalPort == local_port]
-
-        good_acls = self._utils._filter_security_acls(
-            acls, mock_acl.Action, self._FAKE_ACL_DIR, self._FAKE_ACL_TYPE,
-            local_port, protocol, remote_addr)
-        bad_acls = self._utils._filter_security_acls(
-            acls, self._FAKE_ACL_ACT, self._FAKE_ACL_DIR, self._FAKE_ACL_TYPE,
-            local_port, protocol, remote_addr)
-
-        self.assertEqual(right_acls, good_acls)
-        self.assertEqual([], bad_acls)
+        self.assertEqual(mock.sentinel.weight, acl.Weight)
 
     def test_get_new_weight(self):
+        mock_rule = mock.MagicMock(Action=self._utils._ACL_ACTION_ALLOW)
         mockacl1 = mock.MagicMock()
         mockacl1.Weight = self._utils._MAX_WEIGHT - 1
+        mockacl1.Action = self._utils._ACL_ACTION_ALLOW
         mockacl2 = mock.MagicMock()
         mockacl2.Weight = self._utils._MAX_WEIGHT - 3
+        mockacl2.Action = self._utils._ACL_ACTION_ALLOW
         self.assertEqual(self._utils._MAX_WEIGHT - 2,
-                         self._utils._get_new_weight([mockacl1, mockacl2]))
+                         self._utils._get_new_weight(mock_rule,
+                                                     [mockacl1, mockacl2]))
 
-    def test_get_new_weight_no_acls(self):
+    def test_get_new_weight_no_acls_allow(self):
+        mock_rule = mock.MagicMock(Action=self._utils._ACL_ACTION_ALLOW)
         self.assertEqual(self._utils._MAX_WEIGHT - 1,
-                         self._utils._get_new_weight([]))
+                         self._utils._get_new_weight(mock_rule, []))
+
+    def test_get_new_weight_no_acls_deny(self):
+        mock_rule = mock.MagicMock(Action=self._utils._ACL_ACTION_DENY)
+        self.assertEqual(1, self._utils._get_new_weight(mock_rule, []))
 
     def test_get_new_weight_default_acls(self):
+        mock_rule = mock.MagicMock(Action=self._utils._ACL_ACTION_ALLOW)
         mockacl1 = mock.MagicMock()
         mockacl1.Weight = self._utils._MAX_WEIGHT - 1
+        mockacl1.Action = self._utils._ACL_ACTION_ALLOW
         mockacl2 = mock.MagicMock()
         mockacl2.Weight = self._utils._MAX_WEIGHT - 2
         mockacl2.Action = self._utils._ACL_ACTION_DENY
 
         self.assertEqual(self._utils._MAX_WEIGHT - 2,
-                         self._utils._get_new_weight([mockacl1, mockacl2]))
+                         self._utils._get_new_weight(mock_rule,
+                                                     [mockacl1, mockacl2]))
