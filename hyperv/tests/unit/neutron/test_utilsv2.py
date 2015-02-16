@@ -70,12 +70,8 @@ class TestHyperVUtilsV2(base.BaseTestCase):
             self._utils._modify_virt_resource = mock.MagicMock()
 
         self._utils._get_vswitch = mock.MagicMock()
-        self._utils._get_switch_port_allocation = mock.MagicMock()
-
-        mock_port = mock.MagicMock()
+        mock_port = self._mock_get_switch_port_alloc(found=found)
         mock_port.HostResource = []
-        self._utils._get_switch_port_allocation.return_value = (mock_port,
-                                                                found)
 
         self._utils.connect_vnic_to_vswitch(self._FAKE_VSWITCH_NAME,
                                             self._FAKE_PORT_NAME)
@@ -167,11 +163,7 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self._test_disconnect_switch_port(False)
 
     def _test_disconnect_switch_port(self, delete_port):
-        self._utils._get_switch_port_allocation = mock.MagicMock()
-
-        mock_sw_port = mock.MagicMock()
-        self._utils._get_switch_port_allocation.return_value = (mock_sw_port,
-                                                                True)
+        mock_sw_port = self._mock_get_switch_port_alloc()
 
         if delete_port:
             self._utils._remove_virt_resource = mock.MagicMock()
@@ -200,9 +192,7 @@ class TestHyperVUtilsV2(base.BaseTestCase):
                           self._FAKE_VSWITCH_NAME)
 
     def test_set_vswitch_port_vlan_id(self):
-        mock_port_alloc = mock.MagicMock()
-        self._utils._get_switch_port_allocation = mock.MagicMock(return_value=(
-            mock_port_alloc, True))
+        self._mock_get_switch_port_alloc(found=True)
         self._utils._get_vlan_setting_data_from_port_alloc = mock.MagicMock()
 
         mock_svc = self._utils._conn.Msvm_VirtualSystemManagementService()[0]
@@ -251,10 +241,7 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self.assertEqual(ret_val, (mock_data, False))
 
     def test_enable_port_metrics_collection(self):
-        mock_port = mock.MagicMock()
-        self._utils._get_switch_port_allocation = mock.MagicMock(return_value=(
-            mock_port, True))
-
+        mock_port = self._mock_get_switch_port_alloc()
         mock_acl = mock.MagicMock()
 
         with mock.patch.multiple(
@@ -268,14 +255,11 @@ class TestHyperVUtilsV2(base.BaseTestCase):
             self._utils._add_virt_feature.assert_called_with(
                 mock_port, mock_acl)
 
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2'
-                '._get_switch_port_allocation')
-    def test_enable_control_metrics_ok(self, mock_get_port_allocation):
+    def test_enable_control_metrics_ok(self):
         mock_metrics_svc = self._utils._conn.Msvm_MetricService()[0]
         mock_metrics_def_source = self._utils._conn.CIM_BaseMetricDefinition
         mock_metric_def = mock.MagicMock()
-        mock_port = mock.MagicMock()
-        mock_get_port_allocation.return_value = (mock_port, True)
+        mock_port = self._mock_get_switch_port_alloc()
 
         mock_metrics_def_source.return_value = [mock_metric_def]
         m_call = mock.call(Subject=mock_port.path_.return_value,
@@ -286,52 +270,42 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
         mock_metrics_svc.ControlMetrics.assert_has_calls([m_call, m_call])
 
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2'
-                '._get_switch_port_allocation')
-    def test_enable_control_metrics_no_port(self, mock_get_port_allocation):
+    def test_enable_control_metrics_no_port(self):
         mock_metrics_svc = self._utils._conn.Msvm_MetricService()[0]
-        mock_get_port_allocation.return_value = (None, False)
+        self._mock_get_switch_port_alloc(found=False)
 
         self._utils.enable_control_metrics(self._FAKE_PORT_NAME)
         self.assertEqual(0, mock_metrics_svc.ControlMetrics.call_count)
 
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2'
-                '._get_switch_port_allocation')
-    def test_enable_control_metrics_no_def(self, mock_get_port_allocation):
+    def test_enable_control_metrics_no_def(self):
         mock_metrics_svc = self._utils._conn.Msvm_MetricService()[0]
         mock_metrics_def_source = self._utils._conn.CIM_BaseMetricDefinition
-        mock_port = mock.MagicMock()
 
-        mock_get_port_allocation.return_value = (mock_port, True)
+        self._mock_get_switch_port_alloc()
         mock_metrics_def_source.return_value = None
 
         self._utils.enable_control_metrics(self._FAKE_PORT_NAME)
         self.assertEqual(0, mock_metrics_svc.ControlMetrics.call_count)
 
     @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._is_port_vm_started')
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2'
-                '._get_switch_port_allocation')
-    def test_can_enable_control_metrics_true(self, mock_get, mock_is_started):
+    def test_can_enable_control_metrics_true(self, mock_is_started):
         mock_acl = mock.MagicMock()
         mock_acl.Action = self._utils._ACL_ACTION_METER
-        self._test_can_enable_control_metrics(mock_get, mock_is_started,
+        self._test_can_enable_control_metrics(mock_is_started,
                                               [mock_acl, mock_acl], True)
 
     @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._is_port_vm_started')
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2'
-                '._get_switch_port_allocation')
-    def test_can_enable_control_metrics_false(self, mock_get, mock_is_started):
-        self._test_can_enable_control_metrics(mock_get, mock_is_started, [],
+    def test_can_enable_control_metrics_false(self, mock_is_started):
+        self._test_can_enable_control_metrics(mock_is_started, [],
                                               False)
 
-    def _test_can_enable_control_metrics(self, mock_get_port, mock_vm_started,
-                                         acls, expected_result):
-        mock_port = mock.MagicMock()
+    def _test_can_enable_control_metrics(self, mock_vm_started, acls,
+                                         expected_result):
+        mock_port = self._mock_get_switch_port_alloc()
         mock_acl = mock.MagicMock()
         mock_acl.Action = self._utils._ACL_ACTION_METER
 
         mock_port.associators.return_value = acls
-        mock_get_port.return_value = (mock_port, True)
         mock_vm_started.return_value = True
 
         result = self._utils.can_enable_control_metrics(self._FAKE_PORT_NAME)
@@ -429,12 +403,10 @@ class TestHyperVUtilsV2(base.BaseTestCase):
             [mock_acl])
 
     def _setup_security_rule_test(self):
-        mock_port = mock.MagicMock()
+        mock_port = self._mock_get_switch_port_alloc()
         mock_acl = mock.MagicMock()
         mock_port.associators.return_value = [mock_acl]
 
-        self._utils._get_switch_port_allocation = mock.MagicMock(return_value=(
-            mock_port, True))
         self._utils._filter_security_acls = mock.MagicMock(
             return_value=[mock_acl])
 
