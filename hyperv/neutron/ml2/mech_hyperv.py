@@ -29,7 +29,13 @@ class HypervMechanismDriver(object):
     """
 
     def get_allowed_network_types(self, agent=None):
-        return [constants.TYPE_LOCAL, constants.TYPE_FLAT, constants.TYPE_VLAN]
+        network_types = [constants.TYPE_LOCAL, constants.TYPE_FLAT,
+                         constants.TYPE_VLAN]
+        if agent is not None:
+            tunnel_types = agent.get('configurations', {}).get('tunnel_types')
+            if tunnel_types:
+                network_types.extend(tunnel_types)
+        return network_types
 
     def get_mappings(self, agent):
         return agent['configurations'].get('vswitch_mappings', {})

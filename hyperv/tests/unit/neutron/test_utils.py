@@ -34,6 +34,15 @@ class HyperVUtilsTestCase(base.BaseTestCase):
         self.utils = utils.HyperVUtils()
         self.utils._wmi_conn = mock.MagicMock()
 
+    @mock.patch.object(utils.HyperVUtils, '_get_vnic_settings')
+    def test_get_vnic_mac_address(self, mock_get_vnic_settings):
+        mock_vnic = mock.MagicMock(Address=mock.sentinel.mac_address)
+        mock_get_vnic_settings.return_value = mock_vnic
+
+        actual_mac_address = self.utils.get_vnic_mac_address(
+            mock.sentinel.switch_port_name)
+        self.assertEqual(mock.sentinel.mac_address, actual_mac_address)
+
     @mock.patch.object(utils.HyperVUtils, "_get_switch_port_path_by_name")
     def test_disconnect_switch_port_not_found(self, mock_get_swp_path):
         mock_svc = self.utils._conn.Msvm_VirtualSwitchManagementService()[0]
