@@ -88,6 +88,10 @@ networking-plugin-hyperv_agent.html
                 vswitch = parts[1].strip()
                 self._physical_network_mappings[pattern] = vswitch
 
+    def get_agent_configurations(self):
+        configurations = {'vswitch_mappings': self._physical_network_mappings}
+        return configurations
+
     def _get_vswitch_for_physical_network(self, phys_network_name):
         for pattern in self._physical_network_mappings:
             if phys_network_name is None:
