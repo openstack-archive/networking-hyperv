@@ -159,8 +159,7 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         else:
             self._utils._modify_virt_resource = mock.MagicMock()
 
-        self._utils.disconnect_switch_port(self._FAKE_VSWITCH_NAME,
-                                           self._FAKE_PORT_NAME,
+        self._utils.disconnect_switch_port(self._FAKE_PORT_NAME,
                                            True, delete_port)
 
         if delete_port:

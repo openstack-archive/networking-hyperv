@@ -218,8 +218,7 @@ networking-plugin-hyperv_agent.html
             return
 
         LOG.debug("Unbinding port %s", port_id)
-        self._utils.disconnect_switch_port(map['vswitch_name'], port_id,
-                                           vnic_deleted, True)
+        self._utils.disconnect_switch_port(port_id, vnic_deleted, True)
 
         if not map['ports']:
             self._reclaim_local_network(net_uuid)

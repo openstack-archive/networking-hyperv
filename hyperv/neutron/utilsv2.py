@@ -113,8 +113,8 @@ class HyperVUtilsV2(utils.HyperVUtils):
             FeatureSettings=[f.path_() for f in feature_resources])
         self._check_job_status(ret_val, job_path)
 
-    def disconnect_switch_port(
-            self, vswitch_name, switch_port_name, vnic_deleted, delete_port):
+    def disconnect_switch_port(self, switch_port_name, vnic_deleted,
+                               delete_port):
         """Disconnects the switch port."""
         sw_port, found = self._get_switch_port_allocation(switch_port_name)
         if not sw_port:
