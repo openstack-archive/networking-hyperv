@@ -68,10 +68,14 @@ class HyperVUtilsV2(utils.HyperVUtils):
         super(HyperVUtilsV2, self).__init__()
 
     def connect_vnic_to_vswitch(self, vswitch_name, switch_port_name):
-        vnic = self._get_vnic_settings(switch_port_name)
-        vswitch = self._get_vswitch(vswitch_name)
-
         port, found = self._get_switch_port_allocation(switch_port_name, True)
+        if found and port.HostResource and port.HostResource[0]:
+            # vswitch port already exists and is connected to vswitch.
+            return
+
+        vswitch = self._get_vswitch(vswitch_name)
+        vnic = self._get_vnic_settings(switch_port_name)
+
         port.HostResource = [vswitch.path_()]
         port.Parent = vnic.path_()
         if not found:
@@ -148,6 +152,11 @@ class HyperVUtilsV2(utils.HyperVUtils):
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         vlan_settings = self._get_vlan_setting_data_from_port_alloc(port_alloc)
         if vlan_settings:
+            if (vlan_settings.OperationMode == self._OPERATION_MODE_ACCESS and
+                    vlan_settings.AccessVlanId == vlan_id):
+                # VLAN already set to corect value, no need to change it.
+                return
+
             # Removing the feature because it cannot be modified
             # due to a wmi exception.
             (job_path, ret_val) = vs_man_svc.RemoveFeatureSettings(
