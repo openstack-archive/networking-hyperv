@@ -13,8 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
+
 from hyperv.common.i18n import _LE, _LI  # noqa
-from hyperv.common import log as logging
 from hyperv.neutron import utilsfactory
 from hyperv.neutron import utilsv2
 

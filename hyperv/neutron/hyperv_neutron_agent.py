@@ -18,8 +18,9 @@ import collections
 import re
 import time
 
+from oslo_log import log as logging
+
 from hyperv.common.i18n import _, _LE, _LI  # noqa
-from hyperv.common import log as logging
 from hyperv.neutron import constants
 from hyperv.neutron import utils
 from hyperv.neutron import utilsfactory
