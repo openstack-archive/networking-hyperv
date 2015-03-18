@@ -18,10 +18,10 @@ import sys
 import time
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import excutils
 
 from hyperv.common.i18n import _  # noqa
-from hyperv.common import log as logging
 
 # Check needed for unit testing on Unix
 if sys.platform == 'win32':
