@@ -25,8 +25,8 @@ import traceback
 import eventlet.timeout
 import fixtures
 import mock
-from oslo.config import cfg
-from oslo.utils import strutils
+from oslo_config import cfg
+from oslo_utils import strutils
 import testtools
 
 CONF = cfg.CONF

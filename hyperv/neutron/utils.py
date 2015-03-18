@@ -17,8 +17,8 @@
 import sys
 import time
 
-from oslo.config import cfg
-from oslo.utils import excutils
+from oslo_config import cfg
+from oslo_utils import excutils
 
 from hyperv.common.i18n import _  # noqa
 from hyperv.common import log as logging
