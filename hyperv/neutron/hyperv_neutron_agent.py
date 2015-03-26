@@ -355,7 +355,6 @@ networking-plugin-hyperv_agent.html
                 self._port_enable_control_metrics()
             except Exception:
                 LOG.exception(_LE("Error in agent event loop"))
-                sync = True
 
             # sleep till end of polling interval
             elapsed = (time.time() - start)
