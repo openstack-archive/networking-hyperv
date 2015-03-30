@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from eventlet import greenthread
 from oslo_log import log as logging
 
 from hyperv.common.i18n import _LE, _LI  # noqa
@@ -55,6 +56,8 @@ class HyperVSecurityGroupsDriverMixin(object):
 
     def _create_port_rules(self, port_id, rules):
         for rule in rules:
+            # yielding to other threads that must run (like state reporting)
+            greenthread.sleep()
             param_map = self._create_param_map(rule)
             try:
                 self._utils.create_security_rule(port_id, **param_map)
@@ -65,6 +68,8 @@ class HyperVSecurityGroupsDriverMixin(object):
 
     def _remove_port_rules(self, port_id, rules):
         for rule in rules:
+            # yielding to other threads that must run (like state reporting)
+            greenthread.sleep()
             param_map = self._create_param_map(rule)
             try:
                 self._utils.remove_security_rule(port_id, **param_map)
