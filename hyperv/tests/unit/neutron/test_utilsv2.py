@@ -335,56 +335,57 @@ class TestHyperVUtilsV2(base.BaseTestCase):
             [self._utils._VM_SUMMARY_ENABLED_STATE],
             [self._FAKE_RES_PATH])
 
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._bind_security_rule')
-    def test_create_security_rule(self, mock_bind):
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._bind_security_rules')
+    def test_create_security_rules(self, mock_bind):
         (m_port, m_acl) = self._setup_security_rule_test()
         fake_rule = mock.MagicMock()
 
-        self._utils.create_security_rule(self._FAKE_PORT_NAME, fake_rule)
+        self._utils.create_security_rules(self._FAKE_PORT_NAME, fake_rule)
         mock_bind.assert_called_once_with(m_port, fake_rule)
 
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._add_virt_feature')
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_add_multiple_virt_features')
     @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._create_security_acl')
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._get_new_weight')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._get_new_weights')
     @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._filter_security_acls')
-    def test_bind_security_rule(self, mock_filtered_acls, mock_get_weight,
-                                mock_create_acl, mock_add):
+    def test_bind_security_rules(self, mock_filtered_acls, mock_get_weights,
+                                 mock_create_acl, mock_add):
         m_port = mock.MagicMock()
         m_acl = mock.MagicMock()
         m_port.associators.return_value = [m_acl]
         mock_filtered_acls.return_value = []
-        mock_get_weight.return_value = mock.sentinel.FAKE_WEIGHT
+        mock_get_weights.return_value = [mock.sentinel.FAKE_WEIGHT]
         mock_create_acl.return_value = m_acl
         fake_rule = mock.MagicMock()
 
-        self._utils._bind_security_rule(m_port, fake_rule)
+        self._utils._bind_security_rules(m_port, [fake_rule])
 
-        mock_filtered_acls.assert_called_once_with(fake_rule, [m_acl])
-        mock_get_weight.assert_called_once_with(fake_rule, [m_acl])
         mock_create_acl.assert_called_once_with(fake_rule,
                                                 mock.sentinel.FAKE_WEIGHT)
-        self._utils._add_virt_feature.assert_called_once_with(m_port, m_acl)
+        mock_add.assert_called_once_with(m_port, [m_acl])
 
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._get_new_weight')
+    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._get_new_weights')
     @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._filter_security_acls')
-    def test_bind_security_rule_existent(self, mock_filtered_acls,
-                                         mock_get_weight):
+    def test_bind_security_rules_existent(self, mock_filtered_acls,
+                                          mock_get_weights):
         m_port = mock.MagicMock()
         m_acl = mock.MagicMock()
         m_port.associators.return_value = [m_acl]
         mock_filtered_acls.return_value = [m_acl]
         fake_rule = mock.MagicMock()
 
-        self._utils._bind_security_rule(m_port, fake_rule)
+        self._utils._bind_security_rules(m_port, [fake_rule])
         mock_filtered_acls.assert_called_once_with(fake_rule, [m_acl])
-        self.assertFalse(mock_get_weight.called)
+        mock_get_weights.assert_called_once_with([fake_rule], [m_acl])
 
-    @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._remove_virt_feature')
-    def test_remove_security_rule(self, mock_remove_feature):
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_remove_multiple_virt_features')
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_filter_security_acls')
+    def test_remove_security_rules(self, mock_filter, mock_remove_feature):
         mock_acl = self._setup_security_rule_test()[1]
         fake_rule = mock.MagicMock()
-        self._utils.remove_security_rule(self._FAKE_PORT_NAME, fake_rule)
-        self._utils._remove_virt_feature.assert_called_once_with(mock_acl)
+        mock_filter.return_value = [mock_acl]
+
+        self._utils.remove_security_rules(self._FAKE_PORT_NAME, [fake_rule])
+        mock_remove_feature.assert_called_once_with([mock_acl])
 
     @mock.patch.object(utilsv2.HyperVUtilsV2, '_remove_multiple_virt_features')
     def test_remove_all_security_rules(self, mock_remove_feature):
@@ -430,6 +431,10 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self.assertEqual(acls, good_acls)
         self.assertEqual([], bad_acls)
 
+    def test_get_new_weights_allow(self):
+        actual = self._utils._get_new_weights([mock.ANY, mock.ANY], mock.ANY)
+        self.assertEqual([0, 0], actual)
+
 
 class TestHyperVUtilsV2R2(base.BaseTestCase):
 
@@ -446,36 +451,49 @@ class TestHyperVUtilsV2R2(base.BaseTestCase):
 
         self.assertEqual(mock.sentinel.weight, acl.Weight)
 
-    def test_get_new_weight(self):
-        mock_rule = mock.MagicMock(Action=self._utils._ACL_ACTION_ALLOW)
-        mockacl1 = mock.MagicMock()
-        mockacl1.Weight = self._utils._MAX_WEIGHT - 1
-        mockacl1.Action = self._utils._ACL_ACTION_ALLOW
-        mockacl2 = mock.MagicMock()
-        mockacl2.Weight = self._utils._MAX_WEIGHT - 3
-        mockacl2.Action = self._utils._ACL_ACTION_ALLOW
-        self.assertEqual(self._utils._MAX_WEIGHT - 2,
-                         self._utils._get_new_weight(mock_rule,
-                                                     [mockacl1, mockacl2]))
-
-    def test_get_new_weight_no_acls_allow(self):
-        mock_rule = mock.MagicMock(Action=self._utils._ACL_ACTION_ALLOW)
-        self.assertEqual(self._utils._MAX_WEIGHT - 1,
-                         self._utils._get_new_weight(mock_rule, []))
-
-    def test_get_new_weight_no_acls_deny(self):
+    def test_get_new_weights_no_acls_deny(self):
         mock_rule = mock.MagicMock(Action=self._utils._ACL_ACTION_DENY)
-        self.assertEqual(1, self._utils._get_new_weight(mock_rule, []))
+        actual = self._utils._get_new_weights([mock_rule], [])
+        self.assertEqual([1], actual)
 
-    def test_get_new_weight_default_acls(self):
+    def test_get_new_weights_no_acls_allow(self):
         mock_rule = mock.MagicMock(Action=self._utils._ACL_ACTION_ALLOW)
-        mockacl1 = mock.MagicMock()
-        mockacl1.Weight = self._utils._MAX_WEIGHT - 1
-        mockacl1.Action = self._utils._ACL_ACTION_ALLOW
-        mockacl2 = mock.MagicMock()
-        mockacl2.Weight = self._utils._MAX_WEIGHT - 2
-        mockacl2.Action = self._utils._ACL_ACTION_DENY
+        actual = self._utils._get_new_weights([mock_rule, mock_rule], [])
 
-        self.assertEqual(self._utils._MAX_WEIGHT - 2,
-                         self._utils._get_new_weight(mock_rule,
-                                                     [mockacl1, mockacl2]))
+        expected = [self._utils._MAX_WEIGHT - 1, self._utils._MAX_WEIGHT - 2]
+        self.assertEqual(expected, actual)
+
+    def test_get_new_weights_deny(self):
+        mock_rule = mock.MagicMock(Action=self._utils._ACL_ACTION_DENY)
+        mockacl1 = mock.MagicMock(Action=self._utils._ACL_ACTION_DENY,
+                                  Weight=1)
+        mockacl2 = mock.MagicMock(Action=self._utils._ACL_ACTION_DENY,
+                                  Weight=3)
+
+        actual = self._utils._get_new_weights([mock_rule, mock_rule],
+                                              [mockacl1, mockacl2])
+
+        self.assertEqual([2, 4], actual)
+
+    def test_get_new_weights_allow(self):
+        mock_rule = mock.MagicMock(Action=self._utils._ACL_ACTION_ALLOW)
+        mockacl = mock.MagicMock(Action=self._utils._ACL_ACTION_ALLOW,
+                                 Weight=self._utils._MAX_WEIGHT - 3)
+
+        actual = self._utils._get_new_weights([mock_rule, mock_rule],
+                                              [mockacl])
+
+        expected = [self._utils._MAX_WEIGHT - 4, self._utils._MAX_WEIGHT - 5]
+        self.assertEqual(expected, actual)
+
+    def test_get_new_weights_search_available(self):
+        mock_rule = mock.MagicMock(Action=self._utils._ACL_ACTION_ALLOW)
+        mockacl1 = mock.MagicMock(Action=self._utils._ACL_ACTION_ALLOW,
+                                  Weight=self._utils._REJECT_ACLS_COUNT + 1)
+        mockacl2 = mock.MagicMock(Action=self._utils._ACL_ACTION_ALLOW,
+                                  Weight=self._utils._MAX_WEIGHT - 1)
+
+        actual = self._utils._get_new_weights([mock_rule],
+                                              [mockacl1, mockacl2])
+
+        self.assertEqual([self._utils._MAX_WEIGHT - 2], actual)
