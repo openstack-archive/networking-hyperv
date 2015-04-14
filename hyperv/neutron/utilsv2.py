@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from eventlet import greenthread
+
 from hyperv.common.i18n import _  # noqa
 from hyperv.neutron import utils
 
@@ -102,10 +104,13 @@ class HyperVUtilsV2(utils.HyperVUtils):
             ResourceSettings=[res_setting_data.path_()])
         self._check_job_status(ret_val, job)
 
-    def _add_virt_feature(self, element, res_setting_data):
+    def _add_virt_feature(self, element, feature_resource):
+        self._add_multiple_virt_features(element, [feature_resource])
+
+    def _add_multiple_virt_features(self, element, feature_resources):
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         (job_path, out_set_data, ret_val) = vs_man_svc.AddFeatureSettings(
-            element.path_(), [res_setting_data.GetText_(1)])
+            element.path_(), [f.GetText_(1) for f in feature_resources])
         self._check_job_status(ret_val, job_path)
 
     def _remove_virt_feature(self, feature_resource):
@@ -267,24 +272,27 @@ class HyperVUtilsV2(utils.HyperVUtils):
 
         return summary_info[0].EnabledState is self._HYPERV_VM_STATE_ENABLED
 
-    def create_security_rule(self, switch_port_name, sg_rule):
+    def create_security_rules(self, switch_port_name, sg_rules):
         port, found = self._get_switch_port_allocation(switch_port_name, False)
         if not found:
             return
 
-        self._bind_security_rule(port, sg_rule)
+        self._bind_security_rules(port, sg_rules)
 
-    def remove_security_rule(self, switch_port_name, sg_rule):
+    def remove_security_rules(self, switch_port_name, sg_rules):
         port, found = self._get_switch_port_allocation(switch_port_name, False)
         if not found:
             # Port not found. It happens when the VM was already deleted.
             return
 
         acls = port.associators(wmi_result_class=self._PORT_EXT_ACL_SET_DATA)
-        filtered_acls = self._filter_security_acls(sg_rule, acls)
+        remove_acls = []
+        for sg_rule in sg_rules:
+            filtered_acls = self._filter_security_acls(sg_rule, acls)
+            remove_acls.extend(filtered_acls)
 
-        for acl in filtered_acls:
-            self._remove_virt_feature(acl)
+        if remove_acls:
+            self._remove_multiple_virt_features(remove_acls)
 
     def remove_all_security_rules(self, switch_port_name):
         port, found = self._get_switch_port_allocation(switch_port_name, False)
@@ -299,17 +307,33 @@ class HyperVUtilsV2(utils.HyperVUtils):
         if filtered_acls:
             self._remove_multiple_virt_features(filtered_acls)
 
-    def _bind_security_rule(self, port, sg_rule):
+    def _bind_security_rules(self, port, sg_rules):
         acls = port.associators(wmi_result_class=self._PORT_EXT_ACL_SET_DATA)
 
         # Add the ACL only if it don't already exist.
-        filtered_acls = self._filter_security_acls(sg_rule, acls)
-        if filtered_acls:
-            return
+        add_acls = []
+        weights = self._get_new_weights(sg_rules, acls)
+        index = 0
 
-        weight = self._get_new_weight(sg_rule, acls)
-        acl = self._create_security_acl(sg_rule, weight)
-        self._add_virt_feature(port, acl)
+        for sg_rule in sg_rules:
+            filtered_acls = self._filter_security_acls(sg_rule, acls)
+            if filtered_acls:
+                # ACL already exists.
+                continue
+
+            acl = self._create_security_acl(sg_rule, weights[index])
+            add_acls.append(acl)
+            index += 1
+
+            # append sg_rule the acls list, to make sure that the same rule
+            # is not processed twice.
+            acls.append(sg_rule)
+
+            # yielding to other threads that must run (like state reporting)
+            greenthread.sleep()
+
+        if add_acls:
+            self._add_multiple_virt_features(port, add_acls)
 
     def _create_acl(self, direction, acl_type, action):
         acl = self._get_default_setting_data(self._PORT_ALLOC_ACL_SET_DATA)
@@ -334,8 +358,16 @@ class HyperVUtilsV2(utils.HyperVUtils):
     def _filter_security_acls(self, sg_rule, acls):
         return [a for a in acls if sg_rule == a]
 
-    def _get_new_weight(self, acl, acls):
-        return 0
+    def _get_new_weights(self, sg_rules, existent_acls):
+
+        """Computes the weights needed for given sg_rules.
+
+        :param sg_rules: ACLs to be added. They must have the same Action.
+        :existent_acls: ACLs already bound to a switch port.
+        :return: list of weights which will be used to create ACLs. List will
+                 have the recommended order for sg_rules' Action.
+        """
+        return [0] * len(sg_rules)
 
 
 class HyperVUtilsV2R2(HyperVUtilsV2):
@@ -351,16 +383,36 @@ class HyperVUtilsV2R2(HyperVUtilsV2):
         acl.Weight = weight
         return acl
 
-    def _get_new_weight(self, acl, acls):
-        acls = [a for a in acls if a.Action is acl.Action]
-        if not acls:
-            return (self._MAX_WEIGHT - 1
-                    if acl.Action is self._ACL_ACTION_ALLOW else 1)
+    def _get_new_weights(self, sg_rules, existent_acls):
+        sg_rule = sg_rules[0]
+        num_rules = len(sg_rules)
+        existent_acls = [a for a in existent_acls
+                         if a.Action == sg_rule.Action]
+        if not existent_acls:
+            if sg_rule.Action == self._ACL_ACTION_DENY:
+                return range(1, 1 + num_rules)
+            else:
+                return range(self._MAX_WEIGHT - 1,
+                             self._MAX_WEIGHT - 1 - num_rules, - 1)
 
-        weights = [a.Weight for a in acls]
+        # there are existent ACLs.
+        weights = [a.Weight for a in existent_acls]
+        if sg_rule.Action == self._ACL_ACTION_DENY:
+            return [i for i in range(1, self._REJECT_ACLS_COUNT + 1)
+                    if i not in weights][:num_rules]
+
         min_weight = min(weights)
-        for weight in range(min_weight, self._MAX_WEIGHT):
-            if weight not in weights:
-                return weight
+        last_weight = min_weight - num_rules - 1
+        if last_weight > self._REJECT_ACLS_COUNT:
+            return range(min_weight - 1, last_weight, - 1)
 
-        return min_weight - 1
+        # not enough weights. Must search for available weights.
+        # if it is this case, num_rules is a small number.
+        current_weight = self._MAX_WEIGHT - 1
+        new_weights = []
+        for i in range(num_rules):
+            while current_weight in weights:
+                current_weight -= 1
+            new_weights.append(current_weight)
+
+        return new_weights

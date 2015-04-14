@@ -78,29 +78,26 @@ class HyperVSecurityGroupsDriverMixin(object):
 
     def _add_sg_port_rules(self, port_id, sg_rules):
         old_sg_rules = self._sec_group_rules[port_id]
-        for rule in sg_rules:
-            # yielding to other threads that must run (like state reporting)
-            greenthread.sleep()
-            try:
-                self._utils.create_security_rule(port_id, rule)
-                old_sg_rules.append(rule)
-            except Exception as ex:
-                LOG.error(_LE('Hyper-V Exception: %(hyperv_exeption)s while '
-                              'adding rule: %(rule)s'),
-                          dict(hyperv_exeption=ex, rule=rule))
+        # yielding to other threads that must run (like state reporting)
+        greenthread.sleep()
+        try:
+            self._utils.create_security_rules(port_id, sg_rules)
+            old_sg_rules.extend(sg_rules)
+        except Exception as ex:
+            LOG.error(_LE('Hyper-V Exception: %(hyperv_exeption)s while '
+                          'adding rules for port: %(port_id)s'),
+                      dict(hyperv_exeption=ex, port_id=port_id))
 
     def _remove_sg_port_rules(self, port_id, sg_rules):
         old_sg_rules = self._sec_group_rules[port_id]
-        for rule in sg_rules:
-            # yielding to other threads that must run (like state reporting)
-            greenthread.sleep()
-            try:
-                self._utils.remove_security_rule(port_id, rule)
+        try:
+            self._utils.remove_security_rules(port_id, sg_rules)
+            for rule in sg_rules:
                 old_sg_rules.remove(rule)
-            except Exception as ex:
-                LOG.error(_LE('Hyper-V Exception: %(hyperv_exeption)s while '
-                              'removing rule: %(rule)s'),
-                          dict(hyperv_exeption=ex, rule=rule))
+        except Exception as ex:
+            LOG.error(_LE('Hyper-V Exception: %(hyperv_exeption)s while '
+                          'removing rules for port: %(port_id)s'),
+                      dict(hyperv_exeption=ex, port_id=port_id))
 
     def apply_port_filter(self, port):
         LOG.info(_LI('Aplying port filter.'))
