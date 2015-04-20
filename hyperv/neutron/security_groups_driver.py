@@ -128,7 +128,7 @@ class HyperVSecurityGroupsDriverMixin(object):
         return self._security_ports
 
     def _get_rule_remote_address(self, rule):
-        if rule['direction'] is 'ingress':
+        if rule['direction'] == 'ingress':
             ip_prefix = 'source_ip_prefix'
         else:
             ip_prefix = 'dest_ip_prefix'
