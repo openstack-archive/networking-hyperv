@@ -21,7 +21,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 
-from hyperv.common.i18n import _  # noqa
+from hyperv.common.i18n import _, _LE  # noqa
 
 # Check needed for unit testing on Unix
 if sys.platform == 'win32':
@@ -249,14 +249,21 @@ class HyperVUtils(object):
         if vswitch_external_port:
             vlan_endpoint = vswitch_external_port.associators(
                 wmi_association_class=self._BINDS_TO)[0]
-            if vlan_endpoint.DesiredEndpointMode != desired_endpoint_mode:
-                vlan_endpoint.DesiredEndpointMode = desired_endpoint_mode
-                vlan_endpoint.put()
             vlan_endpoint_settings = vlan_endpoint.associators(
                 wmi_result_class=self._VLAN_ENDPOINT_SET_DATA)[0]
             if vlan_id not in vlan_endpoint_settings.TrunkedVLANList:
                 vlan_endpoint_settings.TrunkedVLANList += (vlan_id,)
                 vlan_endpoint_settings.put()
+
+            if (desired_endpoint_mode not in
+                    vlan_endpoint.SupportedEndpointModes):
+                LOG.error(_LE("'Trunk' VLAN endpoint mode is not supported by "
+                              "the switch / physycal network adapter. Correct "
+                              "this issue or use flat networks instead."))
+                return
+            if vlan_endpoint.DesiredEndpointMode != desired_endpoint_mode:
+                vlan_endpoint.DesiredEndpointMode = desired_endpoint_mode
+                vlan_endpoint.put()
 
     def set_vswitch_port_vlan_id(self, vlan_id, switch_port_name):
         vlan_endpoint_settings = self._conn.Msvm_VLANEndpointSettingData(

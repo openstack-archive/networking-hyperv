@@ -129,6 +129,10 @@ class HyperVUtilsTestCase(base.BaseTestCase):
             trunked_list):
         vswitch_external_port = mock_get_vswitch_external_port.return_value
         vlan_endpoint = mock.MagicMock()
+        vlan_endpoint.SupportedEndpointModes = [constants.TRUNK_ENDPOINT_MODE]
+        vlan_endpoint.DesiredEndpointMode = mock.sentinel.endpoint_mode
+        if desired_endpoint_mode is not constants.TRUNK_ENDPOINT_MODE:
+            vlan_endpoint.put.side_effect = Exception
         vswitch_external_port.associators.return_value = [vlan_endpoint]
         vlan_endpoint_settings = mock.MagicMock()
         vlan_endpoint_settings.TrunkedVLANList = trunked_list
@@ -145,10 +149,15 @@ class HyperVUtilsTestCase(base.BaseTestCase):
         vlan_endpoint.associators.assert_called_once_with(
             wmi_result_class=self.utils._VLAN_ENDPOINT_SET_DATA)
 
-        self.assertEqual(desired_endpoint_mode,
-                         vlan_endpoint.DesiredEndpointMode)
         self.assertIn(self.FAKE_VLAN_ID,
                       vlan_endpoint_settings.TrunkedVLANList)
+
+        if desired_endpoint_mode is constants.TRUNK_ENDPOINT_MODE:
+            self.assertEqual(desired_endpoint_mode,
+                             vlan_endpoint.DesiredEndpointMode)
+        else:
+            self.assertEqual(mock.sentinel.endpoint_mode,
+                             vlan_endpoint.DesiredEndpointMode)
 
     @mock.patch.object(utils.HyperVUtils, "_get_vswitch_external_port")
     def test_set_switch_ext_port_trunk_vlan_internal(
@@ -171,3 +180,8 @@ class HyperVUtilsTestCase(base.BaseTestCase):
         self._check_set_switch_ext_port_trunk_vlan(
             desired_endpoint_mode=constants.TRUNK_ENDPOINT_MODE,
             trunked_list=[self.FAKE_VLAN_ID])
+
+    def test_set_switch_ext_port_trunk_vlan_unsupported_endpoint_mode(self):
+        self._check_set_switch_ext_port_trunk_vlan(
+            desired_endpoint_mode=mock.sentinel.unsupported_endpoint_mode,
+            trunked_list=[])
