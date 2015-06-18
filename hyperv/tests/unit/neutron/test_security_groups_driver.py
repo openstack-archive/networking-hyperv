@@ -281,13 +281,14 @@ class SecurityGroupRuleGeneratorR2TestCase(SecurityGroupRuleR2BaseTestCase):
         sg_rule3 = self._create_sg_rule(self._acl('protocol', 'icmp'))
         sg_rule4 = self._create_sg_rule(self._acl('protocol', 'icmp'))
         sg_rule4.Direction = self._acl('direction', 'ingress')
+        sg_rule5 = self._create_sg_rule(self._acl('protocol', 'icmpv6'))
 
         rule = self._create_security_rule()
         rule['protocol'] = sg_driver.ACL_PROP_MAP["default"]
 
         actual = self.sg_gen.create_security_group_rule(rule)
-        self.assertEqual(sorted([sg_rule1, sg_rule2, sg_rule3, sg_rule4]),
-                         sorted(actual))
+        expected = [sg_rule1, sg_rule2, sg_rule3, sg_rule4, sg_rule5]
+        self.assertEqual(sorted(expected), sorted(actual))
 
     def test_create_security_group_rule_icmp_ingress(self):
         self._check_create_security_group_rule_icmp('ingress')
@@ -295,15 +296,22 @@ class SecurityGroupRuleGeneratorR2TestCase(SecurityGroupRuleR2BaseTestCase):
     def test_create_security_group_rule_icmp_egress(self):
         self._check_create_security_group_rule_icmp('egress')
 
-    def _check_create_security_group_rule_icmp(self, direction):
-        sg_rule1 = self._create_sg_rule(self._acl('protocol', 'icmp'),
+    def test_create_security_group_rule_icmpv6_ingress(self):
+        self._check_create_security_group_rule_icmp('ingress', 'icmpv6')
+
+    def test_create_security_group_rule_icmpv6_egress(self):
+        self._check_create_security_group_rule_icmp('egress', 'icmpv6')
+
+    def _check_create_security_group_rule_icmp(self, direction,
+                                               protocol='icmp'):
+        sg_rule1 = self._create_sg_rule(self._acl('protocol', protocol),
                                         direction=direction)
-        sg_rule2 = self._create_sg_rule(self._acl('protocol', 'icmp'),
+        sg_rule2 = self._create_sg_rule(self._acl('protocol', protocol),
                                         direction=direction)
         sg_rule2.Direction = self._acl('direction', 'ingress')
 
         rule = self._create_security_rule()
-        rule['protocol'] = 'icmp'
+        rule['protocol'] = protocol
         rule['direction'] = direction
 
         actual = self.sg_gen.create_security_group_rule(rule)
@@ -312,7 +320,7 @@ class SecurityGroupRuleGeneratorR2TestCase(SecurityGroupRuleR2BaseTestCase):
 
     def test_create_default_sg_rules(self):
         actual = self.sg_gen.create_default_sg_rules()
-        self.assertEqual(12, len(actual))
+        self.assertEqual(16, len(actual))
 
     def test_compute_new_rules_add(self):
         new_rule = self._create_sg_rule()
@@ -379,6 +387,10 @@ class SecurityGroupRuleR2TestCase(SecurityGroupRuleR2BaseTestCase):
 
     def test_stateful_icmp(self):
         sg_rule = self._create_sg_rule(self._acl('protocol', 'icmp'))
+        self.assertFalse(sg_rule.Stateful)
+
+    def test_stateful_icmpv6(self):
+        sg_rule = self._create_sg_rule(self._acl('protocol', 'icmpv6'))
         self.assertFalse(sg_rule.Stateful)
 
     def test_stateful_deny(self):

@@ -59,6 +59,7 @@ class HyperVUtilsV2(utils.HyperVUtils):
     _TCP_PROTOCOL = 'tcp'
     _UDP_PROTOCOL = 'udp'
     _ICMP_PROTOCOL = '1'
+    _ICMPV6_PROTOCOL = '58'
     _MAX_WEIGHT = 65500
 
     # 2 directions x 2 address types = 4 ACLs
@@ -374,8 +375,8 @@ class HyperVUtilsV2R2(HyperVUtilsV2):
     _PORT_EXT_ACL_SET_DATA = 'Msvm_EthernetSwitchPortExtendedAclSettingData'
     _MAX_WEIGHT = 65500
 
-    # 2 directions x 2 address types x 3 protocols = 12 ACLs
-    _REJECT_ACLS_COUNT = 12
+    # 2 directions x 2 address types x 4 protocols = 16 ACLs
+    _REJECT_ACLS_COUNT = 16
 
     def _create_security_acl(self, sg_rule, weight):
         acl = super(HyperVUtilsV2R2, self)._create_security_acl(sg_rule,
