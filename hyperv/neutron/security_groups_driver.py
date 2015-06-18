@@ -29,7 +29,8 @@ ACL_PROP_MAP = {
                   'IPv6': utilsv2.HyperVUtilsV2._ACL_TYPE_IPV6},
     'protocol': {'tcp': utilsv2.HyperVUtilsV2._TCP_PROTOCOL,
                  'udp': utilsv2.HyperVUtilsV2._UDP_PROTOCOL,
-                 'icmp': utilsv2.HyperVUtilsV2._ICMP_PROTOCOL},
+                 'icmp': utilsv2.HyperVUtilsV2._ICMP_PROTOCOL,
+                 'icmpv6': utilsv2.HyperVUtilsV2._ICMPV6_PROTOCOL},
     'action': {'allow': utilsv2.HyperVUtilsV2._ACL_ACTION_ALLOW,
                'deny': utilsv2.HyperVUtilsV2._ACL_ACTION_DENY},
     'default': "ANY",
@@ -186,7 +187,8 @@ class SecurityGroupRuleGeneratorR2(SecurityGroupRuleGenerator):
                 local_port='',
                 protocol=ACL_PROP_MAP['protocol']['icmp'],
                 remote_addr=remote_address))
-        elif protocol == ACL_PROP_MAP['protocol']['icmp']:
+        elif protocol in [ACL_PROP_MAP['protocol']['icmp'],
+                          ACL_PROP_MAP['protocol']['icmpv6']]:
             # If ICMP rule is added in one direction, create an equivalent
             # rule for the other direction.
             if direction == ACL_PROP_MAP['direction']['ingress']:
@@ -271,7 +273,8 @@ class SecurityGroupRuleR2(SecurityGroupRuleBase):
 
     def __init__(self, direction, local_port, protocol, remote_addr,
                  action=ACL_PROP_MAP['action']['allow']):
-        is_not_icmp = protocol is not ACL_PROP_MAP['protocol']['icmp']
+        is_not_icmp = protocol not in [ACL_PROP_MAP['protocol']['icmp'],
+                                       ACL_PROP_MAP['protocol']['icmpv6']]
 
         self.Direction = direction
         self.Action = action
