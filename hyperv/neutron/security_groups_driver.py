@@ -78,6 +78,8 @@ class HyperVSecurityGroupsDriverMixin(object):
         self._remove_sg_port_rules(port_id, list(set(sg_rules)))
 
     def _add_sg_port_rules(self, port_id, sg_rules):
+        if not sg_rules:
+            return
         old_sg_rules = self._sec_group_rules[port_id]
         # yielding to other threads that must run (like state reporting)
         greenthread.sleep()
@@ -90,6 +92,8 @@ class HyperVSecurityGroupsDriverMixin(object):
                       dict(hyperv_exeption=ex, port_id=port_id))
 
     def _remove_sg_port_rules(self, port_id, sg_rules):
+        if not sg_rules:
+            return
         old_sg_rules = self._sec_group_rules[port_id]
         try:
             self._utils.remove_security_rules(port_id, sg_rules)
