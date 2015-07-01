@@ -178,29 +178,6 @@ class SecurityGroupRuleGeneratorR2(SecurityGroupRuleGenerator):
                                         remote_addr=remote_address)
                     for proto in protocols]
 
-        if (direction == ACL_PROP_MAP['direction']['egress'] and
-                protocol == ACL_PROP_MAP['default']):
-            # ICMP rules cannot be set as stateful. Create an Inbound
-            # equivalent rule, so PING REPLY can be accepted.
-            sg_rules.append(SecurityGroupRuleR2(
-                direction=ACL_PROP_MAP['direction']['ingress'],
-                local_port='',
-                protocol=ACL_PROP_MAP['protocol']['icmp'],
-                remote_addr=remote_address))
-        elif protocol in [ACL_PROP_MAP['protocol']['icmp'],
-                          ACL_PROP_MAP['protocol']['icmpv6']]:
-            # If ICMP rule is added in one direction, create an equivalent
-            # rule for the other direction.
-            if direction == ACL_PROP_MAP['direction']['ingress']:
-                direction = ACL_PROP_MAP['direction']['egress']
-            else:
-                direction = ACL_PROP_MAP['direction']['ingress']
-            sg_rules.append(SecurityGroupRuleR2(
-                direction=direction,
-                local_port='',
-                protocol=protocol,
-                remote_addr=remote_address))
-
         return sg_rules
 
     def create_default_sg_rules(self):
