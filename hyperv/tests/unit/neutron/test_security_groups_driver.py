@@ -178,6 +178,10 @@ class TestHyperVSecurityGroupsDriverMixin(SecurityGroupRuleTestHelper):
             self._FAKE_ID, [mock_rule])
         self.assertIn(mock_rule, self._driver._sec_group_rules[self._FAKE_ID])
 
+    def test_add_sg_port_rules_empty(self):
+        self._driver._add_sg_port_rules(mock.sentinel.id, [])
+        self.assertFalse(self._driver._utils.create_security_rules.called)
+
     def test_remove_sg_port_rules_exception(self):
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = [mock_rule]
@@ -196,6 +200,10 @@ class TestHyperVSecurityGroupsDriverMixin(SecurityGroupRuleTestHelper):
             self._FAKE_ID, [mock_rule])
         self.assertNotIn(mock_rule,
                          self._driver._sec_group_rules[self._FAKE_ID])
+
+    def test_remove_sg_port_rules_empty(self):
+        self._driver._remove_sg_port_rules(mock.sentinel.id, [])
+        self.assertFalse(self._driver._utils.remove_security_rules.called)
 
     def _get_port(self):
         return {
