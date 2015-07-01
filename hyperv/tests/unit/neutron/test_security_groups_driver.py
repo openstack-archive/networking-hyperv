@@ -287,44 +287,14 @@ class SecurityGroupRuleGeneratorR2TestCase(SecurityGroupRuleR2BaseTestCase):
         sg_rule1 = self._create_sg_rule(self._acl('protocol', 'tcp'))
         sg_rule2 = self._create_sg_rule(self._acl('protocol', 'udp'))
         sg_rule3 = self._create_sg_rule(self._acl('protocol', 'icmp'))
-        sg_rule4 = self._create_sg_rule(self._acl('protocol', 'icmp'))
-        sg_rule4.Direction = self._acl('direction', 'ingress')
-        sg_rule5 = self._create_sg_rule(self._acl('protocol', 'icmpv6'))
+        sg_rule4 = self._create_sg_rule(self._acl('protocol', 'icmpv6'))
 
         rule = self._create_security_rule()
         rule['protocol'] = sg_driver.ACL_PROP_MAP["default"]
 
         actual = self.sg_gen.create_security_group_rule(rule)
-        expected = [sg_rule1, sg_rule2, sg_rule3, sg_rule4, sg_rule5]
+        expected = [sg_rule1, sg_rule2, sg_rule3, sg_rule4]
         self.assertEqual(sorted(expected), sorted(actual))
-
-    def test_create_security_group_rule_icmp_ingress(self):
-        self._check_create_security_group_rule_icmp('ingress')
-
-    def test_create_security_group_rule_icmp_egress(self):
-        self._check_create_security_group_rule_icmp('egress')
-
-    def test_create_security_group_rule_icmpv6_ingress(self):
-        self._check_create_security_group_rule_icmp('ingress', 'icmpv6')
-
-    def test_create_security_group_rule_icmpv6_egress(self):
-        self._check_create_security_group_rule_icmp('egress', 'icmpv6')
-
-    def _check_create_security_group_rule_icmp(self, direction,
-                                               protocol='icmp'):
-        sg_rule1 = self._create_sg_rule(self._acl('protocol', protocol),
-                                        direction=direction)
-        sg_rule2 = self._create_sg_rule(self._acl('protocol', protocol),
-                                        direction=direction)
-        sg_rule2.Direction = self._acl('direction', 'ingress')
-
-        rule = self._create_security_rule()
-        rule['protocol'] = protocol
-        rule['direction'] = direction
-
-        actual = self.sg_gen.create_security_group_rule(rule)
-        self.assertIn(sg_rule1, actual)
-        self.assertIn(sg_rule2, actual)
 
     def test_create_default_sg_rules(self):
         actual = self.sg_gen.create_default_sg_rules()
