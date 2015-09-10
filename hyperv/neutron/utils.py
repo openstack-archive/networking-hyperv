@@ -95,6 +95,10 @@ class HyperVUtils(object):
             for p in self._conn.Msvm_SyntheticEthernetPortSettingData()
             if p.ElementName is not None)
 
+    def get_vnic_mac_address(self, switch_port_name):
+        vnic = self._get_vnic_settings(switch_port_name)
+        return vnic.Address
+
     def _get_vnic_settings(self, vnic_name):
         vnic_settings = self._conn.Msvm_SyntheticEthernetPortSettingData(
             ElementName=vnic_name)

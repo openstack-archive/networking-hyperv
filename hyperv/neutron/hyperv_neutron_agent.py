@@ -18,12 +18,33 @@ import collections
 import re
 import time
 
+from oslo_config import cfg
 from oslo_log import log as logging
 
 from hyperv.common.i18n import _, _LE, _LI  # noqa
 from hyperv.neutron import constants
+from hyperv.neutron import hyperv_agent_notifier
+from hyperv.neutron import nvgre_ops
 from hyperv.neutron import utils
 from hyperv.neutron import utilsfactory
+
+nvgre_opts = [
+    cfg.BoolOpt('enable_support',
+                default=False,
+                help=_('Enables Hyper-V NVGRE. '
+                       'Requires Windows Server 2012 or above.')),
+    cfg.IntOpt('provider_vlan_id',
+               default=0,
+               help=_('Specifies the VLAN ID of the physical network, required'
+                      ' for setting the NVGRE Provider Address.')),
+    cfg.StrOpt('provider_tunnel_ip',
+               default=None,
+               help=_('Specifies the tunnel IP which will be used and '
+                      'reported by this host for NVGRE networks.')),
+]
+
+CONF = cfg.CONF
+CONF.register_opts(nvgre_opts, "NVGRE")
 
 LOG = logging.getLogger(__name__)
 
@@ -57,6 +78,13 @@ networking-plugin-hyperv_agent.html
         self._port_metric_retries = {}
 
         self.plugin_rpc = None
+        self.context = None
+        self.client = None
+        self.connection = None
+        self.endpoints = None
+        self.topic = constants.AGENT_TOPIC
+
+        self._nvgre_enabled = False
 
         conf = conf or {}
         agent_conf = conf.get('AGENT', {})
@@ -89,8 +117,48 @@ networking-plugin-hyperv_agent.html
                 vswitch = parts[1].strip()
                 self._physical_network_mappings[pattern] = vswitch
 
+    def _init_nvgre(self):
+        # if NVGRE is enabled, self._nvgre_ops is required in order to properly
+        # set the agent state (see get_agent_configrations method).
+
+        if not CONF.NVGRE.enable_support:
+            return
+
+        if not CONF.NVGRE.provider_tunnel_ip:
+            err_msg = _('enable_nvgre_support is set to True, but provider '
+                        'tunnel IP is not configured. Check neutron.conf '
+                        'config file.')
+            LOG.error(err_msg)
+            raise utils.HyperVException(msg=err_msg)
+
+        self._nvgre_enabled = True
+        self._nvgre_ops = nvgre_ops.HyperVNvgreOps(
+            self._physical_network_mappings.values())
+
+        self._nvgre_ops.init_notifier(self.context, self.client)
+        self._nvgre_ops.tunnel_update(self.context,
+                                      CONF.NVGRE.provider_tunnel_ip,
+                                      constants.TYPE_NVGRE)
+
+        # setup Hyper-V Agent Lookup Record update consumer
+        topic = hyperv_agent_notifier.get_topic_name(
+            self.topic, constants.LOOKUP, constants.UPDATE)
+        self.connection.create_consumer(topic, self.endpoints, fanout=True)
+
+        # the created consumer is the last connection server.
+        # need to start it in order for it to consume.
+        self.connection.servers[-1].start()
+
     def get_agent_configurations(self):
         configurations = {'vswitch_mappings': self._physical_network_mappings}
+        if CONF.NVGRE.enable_support:
+            configurations['arp_responder_enabled'] = False
+            configurations['tunneling_ip'] = CONF.NVGRE.provider_tunnel_ip
+            configurations['devices'] = 1
+            configurations['l2_population'] = False
+            configurations['tunnel_types'] = [constants.TYPE_NVGRE]
+            configurations['enable_distributed_routing'] = False
+            configurations['bridge_mappings'] = {}
         return configurations
 
     def _get_vswitch_for_physical_network(self, phys_network_name):
@@ -135,6 +203,20 @@ networking-plugin-hyperv_agent.html
             network_type, physical_network,
             segmentation_id, port['admin_state_up'])
 
+    def tunnel_update(self, context, **kwargs):
+        LOG.info(_LI('tunnel_update received: kwargs: %s'), kwargs)
+        tunnel_ip = kwargs.get('tunnel_ip')
+        if tunnel_ip == CONF.NVGRE.provider_tunnel_ip:
+            # the notification should be ignored if it originates from this
+            # node.
+            return
+
+        tunnel_type = kwargs.get('tunnel_type')
+        self._nvgre_ops.tunnel_update(context, tunnel_ip, tunnel_type)
+
+    def lookup_update(self, context, **kwargs):
+        self._nvgre_ops.lookup_update(kwargs)
+
     def _get_vswitch_name(self, network_type, physical_network):
         if network_type != constants.TYPE_LOCAL:
             vswitch_name = self._get_vswitch_for_physical_network(
@@ -153,6 +235,9 @@ networking-plugin-hyperv_agent.html
         if network_type == constants.TYPE_VLAN:
             self._utils.set_switch_external_port_trunk_vlan(
                 vswitch_name, segmentation_id, constants.TRUNK_ENDPOINT_MODE)
+        elif network_type == constants.TYPE_NVGRE and self._nvgre_enabled:
+            self._nvgre_ops.bind_nvgre_network(
+                segmentation_id, net_uuid, vswitch_name)
         elif network_type == constants.TYPE_FLAT:
             # Nothing to do
             pass
@@ -201,6 +286,9 @@ networking-plugin-hyperv_agent.html
             self._utils.set_vswitch_port_vlan_id(
                 segmentation_id,
                 port_id)
+        elif network_type == constants.TYPE_NVGRE and self._nvgre_enabled:
+            self._nvgre_ops.bind_nvgre_port(
+                segmentation_id, map['vswitch_name'], port_id)
         elif network_type == constants.TYPE_FLAT:
             # Nothing to do
             pass
@@ -336,6 +424,9 @@ networking-plugin-hyperv_agent.html
         return (resync_a | resync_b)
 
     def daemon_loop(self):
+        # init NVGRE after the RPC connection and context is created.
+        self._init_nvgre()
+
         sync = True
         ports = set()
 
@@ -356,6 +447,8 @@ networking-plugin-hyperv_agent.html
                     sync = self._process_network_ports(port_info)
                     ports = port_info['current']
 
+                if self._nvgre_enabled:
+                    self._nvgre_ops.refresh_nvgre_records()
                 self._port_enable_control_metrics()
             except Exception:
                 LOG.exception(_LE("Error in agent event loop"))

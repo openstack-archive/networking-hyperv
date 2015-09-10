@@ -21,6 +21,7 @@ Unit tests for Windows Hyper-V virtual switch neutron driver
 import mock
 
 from hyperv.neutron import constants
+from hyperv.neutron import hyperv_agent_notifier
 from hyperv.neutron import hyperv_neutron_agent
 from hyperv.neutron import utils
 from hyperv.neutron import utilsfactory
@@ -42,7 +43,12 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent._utils = mock.MagicMock()
         self.agent.sec_groups_agent = mock.MagicMock()
         self.agent.context = mock.Mock()
+        self.agent.client = mock.MagicMock()
+        self.agent.connection = mock.MagicMock()
         self.agent.agent_id = mock.Mock()
+        self.agent.notifier = mock.Mock()
+        self.agent._utils = mock.MagicMock()
+        self.agent._nvgre_ops = mock.MagicMock()
 
     def test_load_physical_network_mappings(self):
         test_mappings = ['fake_network_1:fake_vswitch',
@@ -55,6 +61,54 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
         self.assertEqual(expected,
                          self.agent._physical_network_mappings.items())
+
+    @mock.patch.object(hyperv_neutron_agent.nvgre_ops, 'HyperVNvgreOps')
+    def test_init_nvgre_disabled(self, mock_hyperv_nvgre_ops):
+        self.agent._init_nvgre()
+        self.assertFalse(mock_hyperv_nvgre_ops.called)
+        self.assertFalse(self.agent._nvgre_enabled)
+
+    @mock.patch.object(hyperv_neutron_agent.nvgre_ops, 'HyperVNvgreOps')
+    def test_init_nvgre_no_tunnel_ip(self, mock_hyperv_nvgre_ops):
+        self.config(enable_support=True, group='NVGRE')
+        self.assertRaises(utils.HyperVException, self.agent._init_nvgre)
+
+    @mock.patch.object(hyperv_neutron_agent.nvgre_ops, 'HyperVNvgreOps')
+    def test_init_nvgre_enabled(self, mock_hyperv_nvgre_ops):
+        self.config(enable_support=True, group='NVGRE')
+        self.config(provider_tunnel_ip=mock.sentinel.tunneling_ip,
+                    group='NVGRE')
+        self.agent._init_nvgre()
+        mock_hyperv_nvgre_ops.assert_called_once_with(
+            self.agent._physical_network_mappings.values())
+
+        self.assertTrue(self.agent._nvgre_enabled)
+        self.agent._nvgre_ops.init_notifier.assert_called_once_with(
+            self.agent.context, self.agent.client)
+        expected_topic = hyperv_agent_notifier.get_topic_name(
+            self.agent.topic, constants.LOOKUP, constants.UPDATE)
+        self.agent.connection.create_consumer.assert_called_once_with(
+            expected_topic, self.agent.endpoints, fanout=True)
+        self.agent.connection.servers[-1].start.assert_called_once_with()
+
+    def test_get_agent_configurations(self):
+        actual = self.agent.get_agent_configurations()
+
+        self.assertEqual(self.agent._physical_network_mappings,
+                         actual['vswitch_mappings'])
+        self.assertNotIn('tunnel_types', actual)
+        self.assertNotIn('tunneling_ip', actual)
+
+    def test_get_agent_configurations_nvgre(self):
+        self.config(enable_support=True, group='NVGRE')
+        self.config(provider_tunnel_ip=mock.sentinel.tunneling_ip,
+                    group='NVGRE')
+        actual = self.agent.get_agent_configurations()
+
+        self.assertEqual(self.agent._physical_network_mappings,
+                         actual['vswitch_mappings'])
+        self.assertEqual([constants.TYPE_NVGRE], actual['tunnel_types'])
+        self.assertEqual(mock.sentinel.tunneling_ip, actual['tunneling_ip'])
 
     def test_get_network_vswitch_map_by_port_id(self):
         net_uuid = 'net-uuid'
@@ -77,6 +131,14 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
         self.assertIsNone(network)
         self.assertIsNone(port_map)
+
+    def test_lookup_update(self):
+        kwargs = {'lookup_ip': mock.sentinel.lookup_ip,
+                  'lookup_details': mock.sentinel.lookup_details}
+
+        self.agent.lookup_update(mock.sentinel.context, **kwargs)
+
+        self.agent._nvgre_ops.lookup_update.assert_called_once_with(kwargs)
 
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        "_get_vswitch_name")
@@ -107,6 +169,25 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         set_switch.assert_called_once_with(vswitch_name,
                                            mock.sentinel.FAKE_SEGMENTATION_ID,
                                            constants.TRUNK_ENDPOINT_MODE)
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       "_get_vswitch_name")
+    def test_provision_network_nvgre(self, mock_get_vswitch_name):
+        self.agent._nvgre_enabled = True
+        vswitch_name = mock_get_vswitch_name.return_value
+        self.agent._provision_network(mock.sentinel.FAKE_PORT_ID,
+                                      mock.sentinel.FAKE_NET_UUID,
+                                      constants.TYPE_NVGRE,
+                                      mock.sentinel.FAKE_PHYSICAL_NETWORK,
+                                      mock.sentinel.FAKE_SEGMENTATION_ID)
+
+        mock_get_vswitch_name.assert_called_once_with(
+            constants.TYPE_NVGRE,
+            mock.sentinel.FAKE_PHYSICAL_NETWORK)
+        self.agent._nvgre_ops.bind_nvgre_network.assert_called_once_with(
+            mock.sentinel.FAKE_SEGMENTATION_ID,
+            mock.sentinel.FAKE_NET_UUID,
+            vswitch_name)
 
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        "_get_vswitch_name")
@@ -154,6 +235,34 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
             self.agent._port_bound(port, net_uuid, 'vlan', None, None)
 
             self.assertEqual(enable_metrics, mock_enable_metrics.called)
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_provision_network')
+    def test_port_bound_nvgre(self, mock_provision_network):
+        self.agent._nvgre_enabled = True
+        network_type = constants.TYPE_NVGRE
+        net_uuid = 'my-net-uuid'
+        fake_map = {'vswitch_name': mock.sentinel.vswitch_name,
+                    'ports': []}
+
+        def fake_prov_network(*args, **kwargs):
+            self.agent._network_vswitch_map[net_uuid] = fake_map
+
+        mock_provision_network.side_effect = fake_prov_network
+
+        self.agent._port_bound(mock.sentinel.port_id, net_uuid, network_type,
+                               mock.sentinel.physical_network,
+                               mock.sentinel.segmentation_id)
+
+        self.assertIn(mock.sentinel.port_id, fake_map['ports'])
+        mock_provision_network.assert_called_once_with(
+            mock.sentinel.port_id, net_uuid, network_type,
+            mock.sentinel.physical_network, mock.sentinel.segmentation_id)
+        self.agent._utils.connect_vnic_to_vswitch.assert_called_once_with(
+            mock.sentinel.vswitch_name, mock.sentinel.port_id)
+        self.agent._nvgre_ops.bind_nvgre_port.assert_called_once_with(
+            mock.sentinel.segmentation_id, mock.sentinel.vswitch_name,
+            mock.sentinel.port_id)
 
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        '_get_network_vswitch_map_by_port_id')

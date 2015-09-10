@@ -14,7 +14,12 @@
 #    under the License.
 
 # Topic for tunnel notifications between the plugin and agent
+AGENT_TOPIC = 'q-agent-notifier'
+
 TUNNEL = 'tunnel'
+LOOKUP = 'lookup'
+
+UPDATE = 'update'
 
 # Special vlan_id value in ovs_vlan_allocations table indicating flat network
 FLAT_VLAN_ID = -1
@@ -23,3 +28,6 @@ TRUNK_ENDPOINT_MODE = 5
 TYPE_FLAT = 'flat'
 TYPE_LOCAL = 'local'
 TYPE_VLAN = 'vlan'
+TYPE_NVGRE = 'gre'
+
+IPV4_DEFAULT = '0.0.0.0'
