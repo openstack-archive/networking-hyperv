@@ -70,8 +70,8 @@ class HyperVSecurityGroupsDriverMixin(object):
         old_sg_rules = self._sec_group_rules[port_id]
         add, rm = self._sg_gen.compute_new_rules_add(old_sg_rules, sg_rules)
 
-        self._remove_sg_port_rules(port_id, list(set(rm)))
         self._add_sg_port_rules(port_id, list(set(add)))
+        self._remove_sg_port_rules(port_id, list(set(rm)))
 
     def _remove_port_rules(self, port_id, rules):
         sg_rules = self._sg_gen.create_security_group_rules(rules)
@@ -125,8 +125,8 @@ class HyperVSecurityGroupsDriverMixin(object):
                      "old rules."),
                  {'new': len(new_rules), 'old': len(remove_rules)})
 
-        self._remove_port_rules(old_port['id'], remove_rules)
         self._create_port_rules(port['id'], new_rules)
+        self._remove_port_rules(old_port['id'], remove_rules)
 
         self._security_ports[port['device']] = port
 
