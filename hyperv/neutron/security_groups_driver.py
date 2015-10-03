@@ -15,6 +15,7 @@
 
 from eventlet import greenthread
 from oslo_log import log as logging
+import six
 
 from hyperv.common.i18n import _LE, _LI  # noqa
 from hyperv.neutron import utilsfactory
@@ -172,7 +173,7 @@ class SecurityGroupRuleGeneratorR2(SecurityGroupRuleGenerator):
         protocol = self._get_rule_protocol(rule)
         if protocol == ACL_PROP_MAP['default']:
             # ANY protocols must be split up, to make stateful rules.
-            protocols = ACL_PROP_MAP['protocol'].values()
+            protocols = list(ACL_PROP_MAP['protocol'].values())
         else:
             protocols = [protocol]
 
@@ -187,7 +188,7 @@ class SecurityGroupRuleGeneratorR2(SecurityGroupRuleGenerator):
     def create_default_sg_rules(self):
         ip_type_pairs = [(ACL_PROP_MAP['ethertype'][ip],
                           ACL_PROP_MAP['address_default'][ip])
-                         for ip in ACL_PROP_MAP['ethertype'].keys()]
+                         for ip in six.iterkeys(ACL_PROP_MAP['ethertype'])]
 
         action = ACL_PROP_MAP['action']['deny']
         port = ACL_PROP_MAP['default']
@@ -214,7 +215,7 @@ class SecurityGroupRuleGeneratorR2(SecurityGroupRuleGenerator):
 
     def _get_rule_protocol(self, rule):
         protocol = self._get_rule_prop_or_default(rule, 'protocol')
-        if protocol in ACL_PROP_MAP['protocol'].keys():
+        if protocol in six.iterkeys(ACL_PROP_MAP['protocol']):
             return ACL_PROP_MAP['protocol'][protocol]
 
         return protocol
@@ -265,5 +266,11 @@ class SecurityGroupRuleR2(SecurityGroupRuleBase):
         self.Stateful = (is_not_icmp and
                          action is not ACL_PROP_MAP['action']['deny'])
 
+        self._cached_hash = hash((direction, action, self.LocalPort,
+                                  protocol, remote_addr))
+
     def __lt__(self, obj):
         return self.Protocol > obj.Protocol
+
+    def __hash__(self):
+        return self._cached_hash

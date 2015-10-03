@@ -19,6 +19,7 @@ import re
 import time
 
 from oslo_log import log as logging
+import six
 
 from hyperv.common.i18n import _, _LE, _LI  # noqa
 from hyperv.neutron import constants
@@ -103,7 +104,7 @@ networking-plugin-hyperv_agent.html
         return phys_network_name
 
     def _get_network_vswitch_map_by_port_id(self, port_id):
-        for network_id, map in self._network_vswitch_map.iteritems():
+        for network_id, map in six.iteritems(self._network_vswitch_map):
             if port_id in map['ports']:
                 return (network_id, map)
 
@@ -232,7 +233,7 @@ networking-plugin-hyperv_agent.html
         if not self.enable_metrics_collection:
             return
 
-        for port_id in self._port_metric_retries.keys():
+        for port_id in list(self._port_metric_retries.keys()):
             if self._utils.can_enable_control_metrics(port_id):
                 self._utils.enable_control_metrics(port_id)
                 LOG.info(_LI('Port metrics enabled for port: %s'), port_id)

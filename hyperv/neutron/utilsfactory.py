@@ -44,7 +44,7 @@ def _get_windows_version():
 
 def _check_min_windows_version(major, minor, build=0):
     version_str = _get_windows_version()
-    return map(int, version_str.split('.')) >= [major, minor, build]
+    return list(map(int, version_str.split('.'))) >= [major, minor, build]
 
 
 def get_hypervutils():

@@ -391,10 +391,10 @@ class HyperVUtilsV2R2(HyperVUtilsV2):
                          if a.Action == sg_rule.Action]
         if not existent_acls:
             if sg_rule.Action == self._ACL_ACTION_DENY:
-                return range(1, 1 + num_rules)
+                return list(range(1, 1 + num_rules))
             else:
-                return range(self._MAX_WEIGHT - 1,
-                             self._MAX_WEIGHT - 1 - num_rules, - 1)
+                return list(range(self._MAX_WEIGHT - 1,
+                            self._MAX_WEIGHT - 1 - num_rules, - 1))
 
         # there are existent ACLs.
         weights = [a.Weight for a in existent_acls]
@@ -405,7 +405,7 @@ class HyperVUtilsV2R2(HyperVUtilsV2):
         min_weight = min(weights)
         last_weight = min_weight - num_rules - 1
         if last_weight > self._REJECT_ACLS_COUNT:
-            return range(min_weight - 1, last_weight, - 1)
+            return list(range(min_weight - 1, last_weight, - 1))
 
         # not enough weights. Must search for available weights.
         # if it is this case, num_rules is a small number.

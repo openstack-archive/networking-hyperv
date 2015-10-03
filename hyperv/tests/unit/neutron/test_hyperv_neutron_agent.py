@@ -45,16 +45,16 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent.agent_id = mock.Mock()
 
     def test_load_physical_network_mappings(self):
-        test_mappings = ['fake_network_1:fake_vswitch',
-                         'fake_network_2:fake_vswitch_2', '*:fake_vswitch_3']
-        expected = [('fake\\_network\\_1', 'fake_vswitch'),
-                    ('fake\\_network\\_2', 'fake_vswitch_2'),
+        test_mappings = ['fakenetwork1:fake_vswitch',
+                         'fakenetwork2:fake_vswitch_2', '*:fake_vswitch_3']
+        expected = [('fakenetwork1', 'fake_vswitch'),
+                    ('fakenetwork2', 'fake_vswitch_2'),
                     ('.*', 'fake_vswitch_3')]
 
         self.agent._load_physical_network_mappings(test_mappings)
 
         self.assertEqual(expected,
-                         self.agent._physical_network_mappings.items())
+                         list(self.agent._physical_network_mappings.items()))
 
     def test_get_network_vswitch_map_by_port_id(self):
         net_uuid = 'net-uuid'
