@@ -15,6 +15,7 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
+import six
 
 from hyperv.common.i18n import _LI, _LW, _LE  # noqa
 from hyperv.neutron import constants
@@ -153,7 +154,7 @@ class HyperVNvgreOps(object):
         # process ports that are bound to tunneling_agents.
         ports = [p for p in ports if p['id'] not in self._nvgre_ports and
                  p['binding:host_id'] in self._tunneling_agents and
-                 p['network_id'] in self._network_vsids.keys()]
+                 p['network_id'] in six.iterkeys(self._network_vsids)]
 
         for port in ports:
             tunneling_ip = self._tunneling_agents[port['binding:host_id']]

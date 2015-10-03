@@ -20,6 +20,7 @@ import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
+import six
 
 from hyperv.common.i18n import _, _LE, _LI  # noqa
 from hyperv.neutron import constants
@@ -133,7 +134,7 @@ networking-plugin-hyperv_agent.html
 
         self._nvgre_enabled = True
         self._nvgre_ops = nvgre_ops.HyperVNvgreOps(
-            self._physical_network_mappings.values())
+            list(self._physical_network_mappings.values()))
 
         self._nvgre_ops.init_notifier(self.context, self.client)
         self._nvgre_ops.tunnel_update(self.context,
@@ -171,7 +172,7 @@ networking-plugin-hyperv_agent.html
         return phys_network_name
 
     def _get_network_vswitch_map_by_port_id(self, port_id):
-        for network_id, map in self._network_vswitch_map.iteritems():
+        for network_id, map in six.iteritems(self._network_vswitch_map):
             if port_id in map['ports']:
                 return (network_id, map)
 
@@ -320,18 +321,22 @@ networking-plugin-hyperv_agent.html
         if not self.enable_metrics_collection:
             return
 
-        for port_id in self._port_metric_retries.keys():
+        enabled_ports = []
+        for port_id in six.iterkeys(self._port_metric_retries):
             if self._utils.can_enable_control_metrics(port_id):
                 self._utils.enable_control_metrics(port_id)
                 LOG.info(_LI('Port metrics enabled for port: %s'), port_id)
-                del self._port_metric_retries[port_id]
+                enabled_ports.append(port_id)
             elif self._port_metric_retries[port_id] < 1:
                 self._utils.enable_control_metrics(port_id)
                 LOG.error(_LE('Port metrics raw enabling for port: %s'),
                           port_id)
-                del self._port_metric_retries[port_id]
+                enabled_ports.append(port_id)
             else:
                 self._port_metric_retries[port_id] -= 1
+
+        for port_id in enabled_ports:
+            self._port_metric_retries.pop(port_id)
 
     def _update_ports(self, registered_ports):
         ports = self._utils.get_vnic_ids()
