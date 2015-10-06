@@ -253,6 +253,8 @@ class SecurityGroupRuleR2(SecurityGroupRuleBase):
 
     IdleSessionTimeout = 0
 
+    _cached_hash = None
+
     def __init__(self, direction, local_port, protocol, remote_addr,
                  action=ACL_PROP_MAP['action']['allow']):
         is_not_icmp = protocol not in [ACL_PROP_MAP['protocol']['icmp'],
@@ -266,9 +268,11 @@ class SecurityGroupRuleR2(SecurityGroupRuleBase):
         self.Stateful = (is_not_icmp and
                          action is not ACL_PROP_MAP['action']['deny'])
 
+        self._cached_hash = hash((direction, action, self.LocalPort,
+                                  protocol, remote_addr))
+
     def __lt__(self, obj):
         return self.Protocol > obj.Protocol
 
     def __hash__(self):
-        return hash((self.Direction, self.Action, self.LocalPort,
-                     self.Protocol, self.RemoteIPAddress))
+        return self._cached_hash

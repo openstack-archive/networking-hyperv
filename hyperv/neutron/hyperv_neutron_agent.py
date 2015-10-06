@@ -321,22 +321,18 @@ networking-plugin-hyperv_agent.html
         if not self.enable_metrics_collection:
             return
 
-        enabled_ports = []
-        for port_id in six.iterkeys(self._port_metric_retries):
+        for port_id in list(self._port_metric_retries.keys()):
             if self._utils.can_enable_control_metrics(port_id):
                 self._utils.enable_control_metrics(port_id)
                 LOG.info(_LI('Port metrics enabled for port: %s'), port_id)
-                enabled_ports.append(port_id)
+                del self._port_metric_retries[port_id]
             elif self._port_metric_retries[port_id] < 1:
                 self._utils.enable_control_metrics(port_id)
                 LOG.error(_LE('Port metrics raw enabling for port: %s'),
                           port_id)
-                enabled_ports.append(port_id)
+                del self._port_metric_retries[port_id]
             else:
                 self._port_metric_retries[port_id] -= 1
-
-        for port_id in enabled_ports:
-            self._port_metric_retries.pop(port_id)
 
     def _update_ports(self, registered_ports):
         ports = self._utils.get_vnic_ids()
