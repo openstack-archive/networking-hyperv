@@ -292,6 +292,13 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
         self.assertEqual(ret_val, (mock_data, False))
 
+    def test_create_default_setting_data(self):
+        result = self._utils._create_default_setting_data('FakeClass')
+
+        fake_class = self._utils._conn.FakeClass
+        self.assertEqual(fake_class.new.return_value, result)
+        fake_class.new.assert_called_once_with()
+
     def test_enable_port_metrics_collection(self):
         mock_port = self._mock_get_switch_port_alloc()
         mock_acl = mock.MagicMock()
@@ -447,7 +454,7 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self._utils._remove_multiple_virt_features.assert_called_once_with(
             [mock_acl])
 
-    @mock.patch.object(utilsv2.HyperVUtilsV2, '_get_default_setting_data')
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_create_default_setting_data')
     def test_create_security_acl(self, mock_get_set_data):
         mock_acl = mock_get_set_data.return_value
         fake_rule = mock.MagicMock()
@@ -494,6 +501,7 @@ class TestHyperVUtilsV2R2(base.BaseTestCase):
     def setUp(self):
         super(TestHyperVUtilsV2R2, self).setUp()
         self._utils = utilsv2.HyperVUtilsV2R2()
+        self._utils._wmi_conn = mock.MagicMock()
 
     @mock.patch.object(utilsv2.HyperVUtilsV2R2, '_get_default_setting_data')
     def test_create_security_acl(self, mock_get_default_setting_data):
