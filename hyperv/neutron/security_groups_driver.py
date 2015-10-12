@@ -251,6 +251,7 @@ class SecurityGroupRuleR2(SecurityGroupRuleBase):
                "RemoteIPAddress", "Stateful", "IdleSessionTimeout"]
 
     IdleSessionTimeout = 0
+    Weight = 65500
 
     def __init__(self, direction, local_port, protocol, remote_addr,
                  action=ACL_PROP_MAP['action']['allow']):
