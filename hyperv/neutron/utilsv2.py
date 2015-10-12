@@ -69,6 +69,13 @@ class HyperVUtilsV2(utils.HyperVUtils):
 
     def __init__(self):
         super(HyperVUtilsV2, self).__init__()
+        self._metric_svc_obj = None
+
+    @property
+    def _metric_svc(self):
+        if self._metric_svc_obj is None:
+            self._metric_svc_obj = self._conn.Msvm_MetricService()[0]
+        return self._metric_svc_obj
 
     def connect_vnic_to_vswitch(self, vswitch_name, switch_port_name):
         port, found = self._get_switch_port_allocation(switch_port_name, True)
@@ -88,20 +95,17 @@ class HyperVUtilsV2(utils.HyperVUtils):
             self._modify_virt_resource(port)
 
     def _modify_virt_resource(self, res_setting_data):
-        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
-        (job_path, out_set_data, ret_val) = vs_man_svc.ModifyResourceSettings(
+        (job_path, out_res, ret_val) = self._vs_man_svc.ModifyResourceSettings(
             ResourceSettings=[res_setting_data.GetText_(1)])
         self._check_job_status(ret_val, job_path)
 
     def _add_virt_resource(self, vm, res_setting_data):
-        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
-        (job_path, out_set_data, ret_val) = vs_man_svc.AddResourceSettings(
+        (job_path, out_res, ret_val) = self._vs_man_svc.AddResourceSettings(
             vm.path_(), [res_setting_data.GetText_(1)])
         self._check_job_status(ret_val, job_path)
 
     def _remove_virt_resource(self, res_setting_data):
-        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
-        (job, ret_val) = vs_man_svc.RemoveResourceSettings(
+        (job, ret_val) = self._vs_man_svc.RemoveResourceSettings(
             ResourceSettings=[res_setting_data.path_()])
         self._check_job_status(ret_val, job)
 
@@ -109,8 +113,7 @@ class HyperVUtilsV2(utils.HyperVUtils):
         self._add_multiple_virt_features(element, [feature_resource])
 
     def _add_multiple_virt_features(self, element, feature_resources):
-        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
-        (job_path, out_set_data, ret_val) = vs_man_svc.AddFeatureSettings(
+        (job_path, out_res, ret_val) = self._vs_man_svc.AddFeatureSettings(
             element.path_(), [f.GetText_(1) for f in feature_resources])
         self._check_job_status(ret_val, job_path)
 
@@ -118,8 +121,7 @@ class HyperVUtilsV2(utils.HyperVUtils):
         self._remove_multiple_virt_features([feature_resource])
 
     def _remove_multiple_virt_features(self, feature_resources):
-        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
-        (job_path, ret_val) = vs_man_svc.RemoveFeatureSettings(
+        (job_path, ret_val) = self._vs_man_svc.RemoveFeatureSettings(
             FeatureSettings=[f.path_() for f in feature_resources])
         self._check_job_status(ret_val, job_path)
 
@@ -173,7 +175,6 @@ class HyperVUtilsV2(utils.HyperVUtils):
             raise utils.HyperVException(
                 msg=_('Port Allocation not found: %s') % switch_port_name)
 
-        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         vlan_settings = self._get_vlan_setting_data_from_port_alloc(port_alloc)
         if vlan_settings:
             if (vlan_settings.OperationMode == self._OPERATION_MODE_ACCESS and
@@ -183,16 +184,12 @@ class HyperVUtilsV2(utils.HyperVUtils):
 
             # Removing the feature because it cannot be modified
             # due to a wmi exception.
-            (job_path, ret_val) = vs_man_svc.RemoveFeatureSettings(
-                FeatureSettings=[vlan_settings.path_()])
-            self._check_job_status(ret_val, job_path)
+            self._remove_virt_feature(vlan_settings)
 
         (vlan_settings, found) = self._get_vlan_setting_data(switch_port_name)
         vlan_settings.AccessVlanId = vlan_id
         vlan_settings.OperationMode = self._OPERATION_MODE_ACCESS
-        (job_path, out, ret_val) = vs_man_svc.AddFeatureSettings(
-            port_alloc.path_(), [vlan_settings.GetText_(1)])
-        self._check_job_status(ret_val, job_path)
+        self._add_virt_feature(port_alloc, vlan_settings)
 
     def set_vswitch_port_vsid(self, vsid, switch_port_name):
         port_alloc, found = self._get_switch_port_allocation(switch_port_name)
@@ -281,13 +278,12 @@ class HyperVUtilsV2(utils.HyperVUtils):
         if not found:
             return
 
-        metric_svc = self._conn.Msvm_MetricService()[0]
         metric_names = [self._NET_IN_METRIC_NAME, self._NET_OUT_METRIC_NAME]
 
         for metric_name in metric_names:
             metric_def = self._conn.CIM_BaseMetricDefinition(Name=metric_name)
             if metric_def:
-                metric_svc.ControlMetrics(
+                self._metric_svc.ControlMetrics(
                     Subject=port.path_(),
                     Definition=metric_def[0].path_(),
                     MetricCollectionEnabled=self._METRIC_ENABLED)
@@ -308,11 +304,10 @@ class HyperVUtilsV2(utils.HyperVUtils):
         return True
 
     def _is_port_vm_started(self, port):
-        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         vmsettings = port.associators(
             wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA)
         # See http://msdn.microsoft.com/en-us/library/cc160706%28VS.85%29.aspx
-        (ret_val, summary_info) = vs_man_svc.GetSummaryInformation(
+        (ret_val, summary_info) = self._vs_man_svc.GetSummaryInformation(
             [self._VM_SUMMARY_ENABLED_STATE],
             [v.path_() for v in vmsettings])
         if ret_val or not summary_info:

@@ -34,6 +34,10 @@ class HyperVUtilsTestCase(base.BaseTestCase):
         self.utils = utils.HyperVUtils()
         self.utils._wmi_conn = mock.MagicMock()
 
+    def test_vs_man_svc(self):
+        expected = self.utils._conn.Msvm_VirtualSystemManagementService()[0]
+        self.assertEqual(expected, self.utils._vs_man_svc)
+
     @mock.patch.object(utils.HyperVUtils, '_get_vnic_settings')
     def test_get_vnic_mac_address(self, mock_get_vnic_settings):
         mock_vnic = mock.MagicMock(Address=mock.sentinel.mac_address)
