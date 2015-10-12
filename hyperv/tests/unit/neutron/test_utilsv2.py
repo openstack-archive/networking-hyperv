@@ -47,6 +47,12 @@ class TestHyperVUtilsV2(base.BaseTestCase):
     _FAKE_REMOTE_ADDR = '0.0.0.0/0'
     _FAKE_WEIGHT = 'fake_weight'
 
+    _FAKE_BAD_INSTANCE_ID = 'bad_instance_id'
+    _FAKE_INSTANCE_ID = (
+        r"Microsoft:609CBAAD-BC13-4A65-AADE-AD95861FE394\\55349F56-72AB-4FA3-"
+        "B5FE-6A30A511A419\\C\\776E0BA7-94A1-41C8-8F28-951F524251B5\\77A43184-"
+        "5444-49BF-ABE0-2210B72ABA73")
+
     def setUp(self):
         super(TestHyperVUtilsV2, self).setUp()
         self._utils = utilsv2.HyperVUtilsV2()
@@ -55,6 +61,37 @@ class TestHyperVUtilsV2(base.BaseTestCase):
     def test_metric_svc(self):
         expected = self._utils._conn.Msvm_MetricService()[0]
         self.assertEqual(expected, self._utils._metric_svc)
+
+    def test_init_caches(self):
+        conn = self._utils._conn
+        mock_port = mock.MagicMock(ElementName=mock.sentinel.port_name)
+        conn.Msvm_EthernetPortAllocationSettingData.return_value = [
+            mock_port]
+
+        mock_sd = mock.MagicMock(InstanceID=self._FAKE_INSTANCE_ID)
+        mock_bad_sd = mock.MagicMock(InstanceID=self._FAKE_BAD_INSTANCE_ID)
+        conn.Msvm_EthernetSwitchPortVlanSettingData.return_value = [
+            mock_bad_sd, mock_sd]
+        conn.Msvm_EthernetSwitchPortSecuritySettingData.return_value = [
+            mock_bad_sd, mock_sd]
+
+        self._utils.init_caches()
+
+        self.assertEqual({mock.sentinel.port_name: mock_port},
+                         self._utils._switch_ports)
+        self.assertEqual([mock_sd], list(self._utils._vlan_sds.values()))
+        self.assertEqual([mock_sd], list(self._utils._vsid_sds.values()))
+
+    def test_update_cache(self):
+        conn = self._utils._conn
+        mock_port = mock.MagicMock(ElementName=mock.sentinel.port_name)
+        conn.Msvm_EthernetPortAllocationSettingData.return_value = [
+            mock_port]
+
+        self._utils.update_cache()
+
+        self.assertEqual({mock.sentinel.port_name: mock_port},
+                         self._utils._switch_ports)
 
     def test_connect_vnic_to_vswitch_found(self):
         self._test_connect_vnic_to_vswitch(True)
@@ -168,6 +205,8 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
     def _test_disconnect_switch_port(self, delete_port):
         mock_sw_port = self._mock_get_switch_port_alloc()
+        self._utils._switch_ports[self._FAKE_PORT_NAME] = mock_sw_port
+        self._utils._vlan_sds[mock_sw_port.InstanceID] = mock.MagicMock()
 
         if delete_port:
             self._utils._remove_virt_resource = mock.MagicMock()
@@ -179,6 +218,8 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
         if delete_port:
             self._utils._remove_virt_resource.assert_called_with(mock_sw_port)
+            self.assertNotIn(self._FAKE_PORT_NAME, self._utils._switch_ports)
+            self.assertNotIn(mock_sw_port.InstanceID, self._utils._vlan_sds)
         else:
             self._utils._modify_virt_resource.assert_called_with(mock_sw_port)
 
@@ -217,9 +258,9 @@ class TestHyperVUtilsV2(base.BaseTestCase):
             mock.sentinel.vswitch_name)
         self.assertEqual(mock.sentinel.network_name, result)
 
-    def test_set_vswitch_port_vlan_id(self):
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_get_default_setting_data')
+    def test_set_vswitch_port_vlan_id(self, mock_get_default_sd):
         self._mock_get_switch_port_alloc(found=True)
-        self._utils._get_vlan_setting_data_from_port_alloc = mock.MagicMock()
 
         mock_svc = self._utils._conn.Msvm_VirtualSystemManagementService()[0]
         mock_svc.RemoveFeatureSettings.return_value = (self._FAKE_JOB_PATH,
@@ -255,14 +296,14 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
     @mock.patch.object(utilsv2.HyperVUtilsV2, '_add_virt_feature')
     @mock.patch.object(utilsv2.HyperVUtilsV2, '_remove_virt_feature')
-    @mock.patch.object(utilsv2.HyperVUtilsV2, '_get_security_setting_data')
-    def test_set_vswitch_port_vsid(self, mock_get_security_sd, mock_rm_feat,
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_get_default_setting_data')
+    def test_set_vswitch_port_vsid(self, mock_get_default_sd, mock_rm_feat,
                                    mock_add_feat):
         mock_port_alloc = self._mock_get_switch_port_alloc()
 
         mock_vsid_settings = mock.MagicMock()
         mock_port_alloc.associators.return_value = [mock_vsid_settings]
-        mock_get_security_sd.return_value = (mock_vsid_settings, True)
+        mock_get_default_sd.return_value = mock_vsid_settings
 
         self._utils.set_vswitch_port_vsid(mock.sentinel.vsid,
                                           mock.sentinel.switch_port_name)
@@ -282,6 +323,72 @@ class TestHyperVUtilsV2(base.BaseTestCase):
                                           mock.sentinel.switch_port_name)
 
         self.assertFalse(mock_add_feat.called)
+
+    @mock.patch.object(utilsv2.HyperVUtilsV2,
+                       '_get_setting_data_from_port_alloc')
+    def test_get_vlan_setting_data_from_port_alloc(self, mock_get_sd):
+        mock_port = mock.MagicMock()
+        result = self._utils._get_vlan_setting_data_from_port_alloc(mock_port)
+
+        self.assertEqual(mock_get_sd.return_value, result)
+        mock_get_sd.assert_called_once_with(mock_port, self._utils._vsid_sds,
+                                            self._utils._PORT_VLAN_SET_DATA)
+
+    @mock.patch.object(utilsv2.HyperVUtilsV2,
+                       '_get_setting_data_from_port_alloc')
+    def test_get_security_setting_data_from_port_alloc(self, mock_get_sd):
+        mock_port = mock.MagicMock()
+        result = self._utils._get_security_setting_data_from_port_alloc(
+            mock_port)
+
+        self.assertEqual(mock_get_sd.return_value, result)
+        mock_get_sd.assert_called_once_with(
+            mock_port, self._utils._vsid_sds,
+            self._utils._PORT_SECURITY_SET_DATA)
+
+    def test_get_setting_data_from_port_alloc_cached(self):
+        mock_port = mock.MagicMock(InstanceID=mock.sentinel.InstanceID)
+        cache = {mock_port.InstanceID: mock.sentinel.sd_object}
+
+        result = self._utils._get_setting_data_from_port_alloc(
+            mock_port, cache, mock.sentinel.data_class)
+
+        self.assertEqual(mock.sentinel.sd_object, result)
+
+    def test_get_setting_data_from_port_alloc(self):
+        sd_object = mock.MagicMock()
+        mock_port = mock.MagicMock(InstanceID=mock.sentinel.InstanceID)
+        mock_port.associators.return_value = [sd_object]
+        cache = {}
+
+        result = self._utils._get_setting_data_from_port_alloc(
+            mock_port, cache, mock.sentinel.data_class)
+
+        self.assertEqual(sd_object, result)
+        self.assertEqual(sd_object, cache[mock.sentinel.InstanceID])
+
+    def test_get_switch_port_allocation_cached(self):
+        self._utils._switch_ports[mock.sentinel.port_name] = (
+            mock.sentinel.port)
+
+        port, found = self._utils._get_switch_port_allocation(
+            mock.sentinel.port_name)
+
+        self.assertEqual(mock.sentinel.port, port)
+        self.assertTrue(found)
+
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_get_setting_data')
+    def test_get_switch_port_allocation(self, mock_get_set_data):
+        mock_get_set_data.return_value = (mock.sentinel.port, True)
+
+        port, found = self._utils._get_switch_port_allocation(
+            mock.sentinel.port_name)
+
+        self.assertEqual(mock.sentinel.port, port)
+        self.assertTrue(found)
+        self.assertIn(mock.sentinel.port_name, self._utils._switch_ports)
+        mock_get_set_data.assert_called_once_with(
+            self._utils._PORT_ALLOC_SET_DATA, mock.sentinel.port_name, False)
 
     def test_get_setting_data(self):
         self._utils._get_first_item = mock.MagicMock(return_value=None)

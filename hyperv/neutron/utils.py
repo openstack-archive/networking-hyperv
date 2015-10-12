@@ -84,6 +84,9 @@ class HyperVUtils(object):
                 self._conn.Msvm_VirtualSystemManagementService()[0])
         return self._vs_man_svc_obj
 
+    def init_caches(self):
+        pass
+
     def get_switch_ports(self, vswitch_name):
         vswitch = self._get_vswitch(vswitch_name)
         vswitch_ports = vswitch.associators(

@@ -36,7 +36,7 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         super(TestHyperVNeutronAgent, self).setUp()
 
         utilsfactory._get_windows_version = mock.MagicMock(
-            return_value='6.2.0')
+            return_value='6.1.0')
 
         self.agent = hyperv_neutron_agent.HyperVNeutronAgentMixin()
         self.agent.plugin_rpc = mock.Mock()

@@ -75,6 +75,7 @@ networking-plugin-hyperv_agent.html
 
         super(HyperVNeutronAgentMixin, self).__init__()
         self._utils = utilsfactory.get_hypervutils()
+        self._utils.init_caches()
         self._network_vswitch_map = {}
         self._port_metric_retries = {}
 
@@ -453,6 +454,11 @@ networking-plugin-hyperv_agent.html
                 self._port_enable_control_metrics()
             except Exception:
                 LOG.exception(_LE("Error in agent event loop"))
+
+                # inconsistent cache might cause exceptions. for example, if a
+                # port has been removed, it will be known in the next loop.
+                # using the old switch port can cause exceptions.
+                self._utils.update_cache()
 
             # sleep till end of polling interval
             elapsed = (time.time() - start)
