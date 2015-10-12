@@ -77,7 +77,6 @@ class TestHyperVSecurityGroupsDriverMixin(SecurityGroupRuleTestHelper):
                        '_add_sg_port_rules')
     def test_prepare_port_filter(self, mock_add_rules, mock_create_rules):
         mock_port = self._get_port()
-        mock_utils_remove = self._driver._utils.remove_all_security_rules
         mock_create_default = self._driver._sg_gen.create_default_sg_rules
 
         self._driver.prepare_port_filter(mock_port)
@@ -85,7 +84,6 @@ class TestHyperVSecurityGroupsDriverMixin(SecurityGroupRuleTestHelper):
         self.assertEqual(mock_port,
                          self._driver._security_ports[self._FAKE_DEVICE])
 
-        mock_utils_remove.assert_called_once_with(self._FAKE_ID)
         mock_add_rules.assert_called_once_with(
             self._FAKE_ID, mock_create_default.return_value)
         self._driver._create_port_rules.assert_called_once_with(

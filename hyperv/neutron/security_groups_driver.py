@@ -57,7 +57,6 @@ class HyperVSecurityGroupsDriverMixin(object):
         # newly created port, add default rules.
         if port['device'] not in self._security_ports:
             LOG.debug('Creating default reject rules.')
-            self._utils.remove_all_security_rules(port['id'])
             self._sec_group_rules[port['id']] = []
 
             def_sg_rules = self._sg_gen.create_default_sg_rules()
