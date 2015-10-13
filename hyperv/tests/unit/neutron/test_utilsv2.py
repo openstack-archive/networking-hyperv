@@ -52,6 +52,10 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self._utils = utilsv2.HyperVUtilsV2()
         self._utils._wmi_conn = mock.MagicMock()
 
+    def test_metric_svc(self):
+        expected = self._utils._conn.Msvm_MetricService()[0]
+        self.assertEqual(expected, self._utils._metric_svc)
+
     def test_connect_vnic_to_vswitch_found(self):
         self._test_connect_vnic_to_vswitch(True)
 

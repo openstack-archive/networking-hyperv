@@ -69,12 +69,20 @@ class HyperVUtils(object):
 
     def __init__(self):
         self._wmi_conn = None
+        self._vs_man_svc_obj = None
 
     @property
     def _conn(self):
         if self._wmi_conn is None:
             self._wmi_conn = wmi.WMI(moniker=self._wmi_namespace)
         return self._wmi_conn
+
+    @property
+    def _vs_man_svc(self):
+        if self._vs_man_svc_obj is None:
+            self._vs_man_svc_obj = (
+                self._conn.Msvm_VirtualSystemManagementService()[0])
+        return self._vs_man_svc_obj
 
     def get_switch_ports(self, vswitch_name):
         vswitch = self._get_vswitch(vswitch_name)
@@ -128,8 +136,7 @@ class HyperVUtils(object):
     def _modify_virt_resource(self, res_setting_data):
         vm = self._get_vm_from_res_setting_data(res_setting_data)
 
-        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
-        (job_path, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
+        (job_path, ret_val) = self._vs_man_svc.ModifyVirtualSystemResources(
             vm.Path_(), [res_setting_data.GetText_(1)])
         self._check_job_status(ret_val, job_path)
 
