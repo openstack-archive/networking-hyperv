@@ -533,6 +533,8 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         mock_create_acl.assert_called_once_with(fake_rule,
                                                 mock.sentinel.FAKE_WEIGHT)
         mock_add.assert_called_once_with(m_port, [m_acl])
+        self.assertEqual([m_acl, fake_rule],
+                         self._utils._sg_acl_sds[m_port.ElementName])
 
     @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._get_new_weights')
     @mock.patch('hyperv.neutron.utilsv2.HyperVUtilsV2._filter_security_acls')
@@ -547,23 +549,50 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self._utils._bind_security_rules(m_port, [fake_rule])
         mock_filtered_acls.assert_called_once_with(fake_rule, [m_acl])
         mock_get_weights.assert_called_once_with([fake_rule], [m_acl])
+        self.assertEqual([m_acl], self._utils._sg_acl_sds[m_port.ElementName])
+
+    def test_get_port_security_acls_cached(self):
+        mock_port = mock.MagicMock(ElementName=mock.sentinel.port_name)
+        self._utils._sg_acl_sds = {
+            mock.sentinel.port_name: [mock.sentinel.fake_acl]}
+
+        acls = self._utils._get_port_security_acls(mock_port)
+
+        self.assertEqual([mock.sentinel.fake_acl], acls)
+
+    def test_get_port_security_acls(self):
+        mock_port = mock.MagicMock()
+        mock_port.associators.return_value = [mock.sentinel.fake_acl]
+
+        acls = self._utils._get_port_security_acls(mock_port)
+
+        self.assertEqual([mock.sentinel.fake_acl], acls)
+        self.assertEqual({mock_port.ElementName: [mock.sentinel.fake_acl]},
+                         self._utils._sg_acl_sds)
 
     @mock.patch.object(utilsv2.HyperVUtilsV2, '_remove_multiple_virt_features')
     @mock.patch.object(utilsv2.HyperVUtilsV2, '_filter_security_acls')
     def test_remove_security_rules(self, mock_filter, mock_remove_feature):
-        mock_acl = self._setup_security_rule_test()[1]
+        mock_port, mock_acl = self._setup_security_rule_test()
+        mock_port.associators.return_value.append(mock.sentinel.fake_acl)
         fake_rule = mock.MagicMock()
         mock_filter.return_value = [mock_acl]
 
         self._utils.remove_security_rules(self._FAKE_PORT_NAME, [fake_rule])
         mock_remove_feature.assert_called_once_with([mock_acl])
+        self.assertEqual([mock.sentinel.fake_acl],
+                         self._utils._sg_acl_sds[mock_port.ElementName])
 
     @mock.patch.object(utilsv2.HyperVUtilsV2, '_remove_multiple_virt_features')
     def test_remove_all_security_rules(self, mock_remove_feature):
-        mock_acl = self._setup_security_rule_test()[1]
+        mock_port, mock_acl = self._setup_security_rule_test()
+        self._utils._sg_acl_sds[mock_port.ElementName] = [
+            mock.sentinel.fake_acl]
+
         self._utils.remove_all_security_rules(self._FAKE_PORT_NAME)
         self._utils._remove_multiple_virt_features.assert_called_once_with(
             [mock_acl])
+        self.assertEqual([], self._utils._sg_acl_sds[mock_port.ElementName])
 
     @mock.patch.object(utilsv2.HyperVUtilsV2, '_create_default_setting_data')
     def test_create_security_acl(self, mock_get_set_data):

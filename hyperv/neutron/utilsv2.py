@@ -75,6 +75,7 @@ class HyperVUtilsV2(utils.HyperVUtils):
         self._switch_ports = {}
         self._vlan_sds = {}
         self._vsid_sds = {}
+        self._sg_acl_sds = {}
 
     @property
     def _metric_svc(self):
@@ -398,6 +399,10 @@ class HyperVUtilsV2(utils.HyperVUtils):
         if remove_acls:
             self._remove_multiple_virt_features(remove_acls)
 
+            # remove the old ACLs from the cache.
+            new_acls = [a for a in acls if a not in remove_acls]
+            self._sg_acl_sds[port.ElementName] = new_acls
+
     def remove_all_security_rules(self, switch_port_name):
         port, found = self._get_switch_port_allocation(switch_port_name, False)
         if not found:
@@ -411,11 +416,15 @@ class HyperVUtilsV2(utils.HyperVUtils):
         if filtered_acls:
             self._remove_multiple_virt_features(filtered_acls)
 
+            # clear the cache.
+            self._sg_acl_sds[port.ElementName] = []
+
     def _bind_security_rules(self, port, sg_rules):
-        acls = port.associators(wmi_result_class=self._PORT_EXT_ACL_SET_DATA)
+        acls = self._get_port_security_acls(port)
 
         # Add the ACL only if it don't already exist.
         add_acls = []
+        processed_sg_rules = []
         weights = self._get_new_weights(sg_rules, acls)
         index = 0
 
@@ -431,13 +440,33 @@ class HyperVUtilsV2(utils.HyperVUtils):
 
             # append sg_rule the acls list, to make sure that the same rule
             # is not processed twice.
-            acls.append(sg_rule)
+            processed_sg_rules.append(sg_rule)
 
             # yielding to other threads that must run (like state reporting)
             greenthread.sleep()
 
         if add_acls:
             self._add_multiple_virt_features(port, add_acls)
+
+            # caching the Security Group Rules that have been processed and
+            # added to the port. The list should only be used to check the
+            # existence of rules, nothing else.
+            acls.extend(processed_sg_rules)
+
+    def _get_port_security_acls(self, port):
+        """Returns a mutable list of Security Group Rule objects.
+
+        Returns the list of Security Group Rule objects from the cache,
+        otherwise it fetches and caches from the port's associators.
+        """
+
+        if port.ElementName in self._sg_acl_sds:
+            return self._sg_acl_sds[port.ElementName]
+
+        acls = port.associators(wmi_result_class=self._PORT_EXT_ACL_SET_DATA)
+        self._sg_acl_sds[port.ElementName] = acls
+
+        return acls
 
     def _create_acl(self, direction, acl_type, action):
         acl = self._get_default_setting_data(self._PORT_ALLOC_ACL_SET_DATA)
@@ -487,6 +516,7 @@ class HyperVUtilsV2R2(HyperVUtilsV2):
         acl = super(HyperVUtilsV2R2, self)._create_security_acl(sg_rule,
                                                                 weight)
         acl.Weight = weight
+        sg_rule.Weight = weight
         return acl
 
     def _get_new_weights(self, sg_rules, existent_acls):
