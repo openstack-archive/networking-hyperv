@@ -10,7 +10,7 @@ Supports Python 2.7 and Python 3.3.
 
 * Free software: Apache license
 * Documentation: http://docs.openstack.org/developer/networking-hyperv
-* Source: http://git.openstack.org/cgit/stackforge/networking-hyperv
+* Source: http://git.openstack.org/cgit/openstack/networking-hyperv
 * Bugs: http://bugs.launchpad.net/networking-hyperv
 
 
