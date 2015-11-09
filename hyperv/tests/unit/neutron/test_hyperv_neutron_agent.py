@@ -78,6 +78,23 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.assertIsNone(network)
         self.assertIsNone(port_map)
 
+    def test_get_vswitch_name_local(self):
+        self.agent._local_network_vswitch = 'test_local_switch'
+        ret = self.agent._get_vswitch_name(constants.TYPE_LOCAL,
+                                           mock.sentinel.FAKE_PHYSICAL_NETWORK)
+
+        self.assertEqual('test_local_switch', ret)
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       "_get_vswitch_for_physical_network")
+    def test_get_vswitch_name_vlan(self, mock_get_vswitch_for_phys_net):
+        ret = self.agent._get_vswitch_name(constants.TYPE_VLAN,
+                                           mock.sentinel.FAKE_PHYSICAL_NETWORK)
+
+        self.assertEqual(mock_get_vswitch_for_phys_net.return_value, ret)
+        mock_get_vswitch_for_phys_net.assert_called_once_with(
+            mock.sentinel.FAKE_PHYSICAL_NETWORK)
+
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        "_get_vswitch_name")
     def test_provision_network_exception(self, mock_get_vswitch_name):
