@@ -169,6 +169,7 @@ class SecurityGroupRuleGeneratorR2(SecurityGroupRuleGenerator):
         local_port = self._get_rule_port_range(rule)
         direction = ACL_PROP_MAP['direction'][rule['direction']]
         remote_address = self._get_rule_remote_address(rule)
+        remote_address = remote_address.split('/128', 1)[0]
         protocol = self._get_rule_protocol(rule)
         if protocol == ACL_PROP_MAP['default']:
             # ANY protocols must be split up, to make stateful rules.
