@@ -104,6 +104,46 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self._utils.clear_port_sg_acls_cache(mock.sentinel.port_id)
         self.assertNotIn(mock.sentinel.acl, self._utils._sg_acl_sds)
 
+    @mock.patch.object(utilsv2, 'wmi', create=True)
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_get_event_wql_query')
+    def test_get_vnic_event_listener(self, mock_get_event_query, mock_wmi):
+        mock_wmi.x_wmi_timed_out = ValueError
+        event = mock.MagicMock()
+        port_class = self._utils._conn.Msvm_SyntheticEthernetPortSettingData
+        wmi_event_listener = port_class.watch_for.return_value
+        wmi_event_listener.side_effect = [mock_wmi.x_wmi_timed_out, event]
+
+        # callback will raise an exception in order to stop iteration in the
+        # listener.
+        callback = mock.MagicMock(side_effect=TypeError)
+
+        returned_listener = self._utils.get_vnic_event_listener(
+            self._utils.EVENT_TYPE_CREATE)
+        self.assertRaises(TypeError, returned_listener, callback)
+
+        mock_get_event_query.assert_called_once_with(
+            cls=self._utils._VNIC_SET_DATA,
+            event_type=self._utils.EVENT_TYPE_CREATE,
+            timeframe=2)
+        port_class.watch_for.assert_called_once_with(
+            mock_get_event_query.return_value)
+        wmi_event_listener.assert_has_calls(
+            [mock.call(self._utils._VNIC_LISTENER_TIMEOUT_MS)] * 2)
+        callback.assert_called_once_with(event.ElementName)
+
+    def test_get_event_wql_query(self):
+        expected = ("SELECT * FROM %(event_type)s WITHIN %(timeframe)s "
+                    "WHERE TargetInstance ISA '%(class)s' AND "
+                    "%(like)s" % {'class': "FakeClass",
+                                  'event_type': self._utils.EVENT_TYPE_CREATE,
+                                  'like': "TargetInstance.foo LIKE 'bar%'",
+                                  'timeframe': 2})
+
+        query = self._utils._get_event_wql_query(
+            "FakeClass", self._utils.EVENT_TYPE_CREATE, like=dict(foo="bar"))
+
+        self.assertEqual(expected, query)
+
     def test_connect_vnic_to_vswitch_found(self):
         self._test_connect_vnic_to_vswitch(True)
 

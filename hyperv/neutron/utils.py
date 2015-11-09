@@ -64,6 +64,7 @@ class HyperVUtils(object):
     _VIRTUAL_SWITCH = 'Msvm_VirtualSwitch'
     _BINDS_TO = 'Msvm_BindsTo'
     _VLAN_ENDPOINT_SET_DATA = 'Msvm_VLANEndpointSettingData'
+    _VNIC_SET_DATA = 'Msvm_SyntheticEthernetPortSettingData'
 
     _wmi_namespace = '//./root/virtualization'
 
