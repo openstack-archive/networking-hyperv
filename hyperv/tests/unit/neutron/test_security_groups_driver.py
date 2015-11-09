@@ -35,6 +35,7 @@ class SecurityGroupRuleTestHelper(base.BaseTestCase):
     _FAKE_ACTION = sg_driver.ACL_PROP_MAP['action']['allow']
     _FAKE_DEST_IP_PREFIX = '10.0.0.0/24'
     _FAKE_SOURCE_IP_PREFIX = '10.0.1.0/24'
+    _FAKE_IPV6_LEN128_IP = 'fddd:cafd:e664:0:f816:3eff:fe8d:59d2/128'
 
     _FAKE_PORT_MIN = 9001
     _FAKE_PORT_MAX = 9011
@@ -277,6 +278,16 @@ class SecurityGroupRuleGeneratorR2TestCase(SecurityGroupRuleR2BaseTestCase):
     def test_create_security_group_rule(self):
         expected = [self._create_sg_rule()]
         rule = self._create_security_rule()
+
+        actual = self.sg_gen.create_security_group_rule(rule)
+        self.assertEqual(expected, actual)
+
+    def test_create_security_group_rule_len128(self):
+        expected = [self._create_sg_rule()]
+        expected[0].RemoteIPAddress = self._FAKE_IPV6_LEN128_IP.split(
+            '/128', 1)[0]
+        rule = self._create_security_rule()
+        rule['dest_ip_prefix'] = self._FAKE_IPV6_LEN128_IP
 
         actual = self.sg_gen.create_security_group_rule(rule)
         self.assertEqual(expected, actual)
