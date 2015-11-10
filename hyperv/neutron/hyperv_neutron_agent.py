@@ -224,7 +224,7 @@ networking-plugin-hyperv_agent.html
             vswitch_name = self._get_vswitch_for_physical_network(
                 physical_network)
         else:
-            vswitch_name = self.local_network_vswitch
+            vswitch_name = self._local_network_vswitch
         return vswitch_name
 
     def _provision_network(self, port_id,
