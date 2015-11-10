@@ -135,6 +135,10 @@ class HyperVSecurityGroupsDriverMixin(object):
         self._security_ports.pop(port['device'], None)
         self._sec_group_rules.pop(port['id'], None)
 
+    def security_group_updated(self, action_type, sec_group_ids,
+                               device_id=None):
+        pass
+
     @property
     def ports(self):
         return self._security_ports
