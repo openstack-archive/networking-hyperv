@@ -64,6 +64,10 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
     def test_init_caches(self):
         conn = self._utils._conn
+
+        mock_vswitch = mock.MagicMock(ElementName=mock.sentinel.vswitch_name)
+        conn.Msvm_VirtualEthernetSwitch.return_value = [mock_vswitch]
+
         mock_port = mock.MagicMock(ElementName=mock.sentinel.port_name)
         conn.Msvm_EthernetPortAllocationSettingData.return_value = [
             mock_port]
@@ -77,6 +81,8 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
         self._utils.init_caches()
 
+        self.assertEqual({mock.sentinel.vswitch_name: mock_vswitch},
+                         self._utils._switches)
         self.assertEqual({mock.sentinel.port_name: mock_port},
                          self._utils._switch_ports)
         self.assertEqual([mock_sd], list(self._utils._vlan_sds.values()))
@@ -228,6 +234,8 @@ class TestHyperVUtilsV2(base.BaseTestCase):
             self._FAKE_VSWITCH]
         vswitch = self._utils._get_vswitch(self._FAKE_VSWITCH_NAME)
 
+        self.assertEqual({self._FAKE_VSWITCH_NAME: self._FAKE_VSWITCH},
+                         self._utils._switches)
         self.assertEqual(self._FAKE_VSWITCH, vswitch)
 
     def test_get_vswitch_not_found(self):

@@ -72,6 +72,7 @@ class HyperVUtilsV2(utils.HyperVUtils):
     def __init__(self):
         super(HyperVUtilsV2, self).__init__()
         self._metric_svc_obj = None
+        self._switches = {}
         self._switch_ports = {}
         self._vlan_sds = {}
         self._vsid_sds = {}
@@ -84,6 +85,9 @@ class HyperVUtilsV2(utils.HyperVUtils):
         return self._metric_svc_obj
 
     def init_caches(self):
+        for vswitch in self._conn.Msvm_VirtualEthernetSwitch():
+            self._switches[vswitch.ElementName] = vswitch
+
         # map between switch port ID and switch port WMI object.
         for port in self._conn.Msvm_EthernetPortAllocationSettingData():
             self._switch_ports[port.ElementName] = port
@@ -180,11 +184,16 @@ class HyperVUtilsV2(utils.HyperVUtils):
             self._modify_virt_resource(sw_port)
 
     def _get_vswitch(self, vswitch_name):
+        if vswitch_name in self._switches:
+            return self._switches[vswitch_name]
+
         vswitch = self._conn.Msvm_VirtualEthernetSwitch(
             ElementName=vswitch_name)
         if not len(vswitch):
             raise utils.HyperVException(msg=_('VSwitch not found: %s') %
                                         vswitch_name)
+
+        self._switches[vswitch_name] = vswitch[0]
         return vswitch[0]
 
     def _get_vswitch_external_port(self, vswitch_name):
