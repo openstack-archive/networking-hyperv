@@ -21,7 +21,6 @@ Unit tests for Windows Hyper-V virtual switch neutron driver
 import mock
 
 from hyperv.neutron import constants
-from hyperv.neutron import hyperv_agent_notifier
 from hyperv.neutron import hyperv_neutron_agent
 from hyperv.neutron import utils
 from hyperv.neutron import utilsfactory
@@ -85,11 +84,6 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.assertTrue(self.agent._nvgre_enabled)
         self.agent._nvgre_ops.init_notifier.assert_called_once_with(
             self.agent.context, self.agent.client)
-        expected_topic = hyperv_agent_notifier.get_topic_name(
-            self.agent.topic, constants.LOOKUP, constants.UPDATE)
-        self.agent.connection.create_consumer.assert_called_once_with(
-            expected_topic, self.agent.endpoints, fanout=True)
-        self.agent.connection.servers[-1].start.assert_called_once_with()
 
     def test_get_agent_configurations(self):
         actual = self.agent.get_agent_configurations()

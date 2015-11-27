@@ -56,7 +56,7 @@ class SecurityGroupRuleTestHelper(base.BaseTestCase):
         return sg_driver.ACL_PROP_MAP[key1][key2]
 
 
-class TestHyperVSecurityGroupsDriverMixin(SecurityGroupRuleTestHelper):
+class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
 
     _FAKE_DEVICE = 'fake_device'
     _FAKE_ID = 'fake_id'
@@ -64,17 +64,17 @@ class TestHyperVSecurityGroupsDriverMixin(SecurityGroupRuleTestHelper):
     _FAKE_PARAM_VALUE = 'fake_param_value'
 
     def setUp(self):
-        super(TestHyperVSecurityGroupsDriverMixin, self).setUp()
+        super(TestHyperVSecurityGroupsDriver, self).setUp()
         self._mock_windows_version = mock.patch.object(utilsfactory,
                                                        'get_hypervutils')
         self._mock_windows_version.start()
-        self._driver = sg_driver.HyperVSecurityGroupsDriverMixin()
+        self._driver = sg_driver.HyperVSecurityGroupsDriver()
         self._driver._utils = mock.MagicMock()
         self._driver._sg_gen = mock.MagicMock()
 
-    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriverMixin,
+    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriver,
                        '_create_port_rules')
-    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriverMixin,
+    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriver,
                        '_add_sg_port_rules')
     def test_prepare_port_filter(self, mock_add_rules, mock_create_rules):
         mock_port = self._get_port()
@@ -108,7 +108,7 @@ class TestHyperVSecurityGroupsDriverMixin(SecurityGroupRuleTestHelper):
         self.assertEqual(new_mock_port,
                          self._driver._security_ports[new_mock_port['device']])
 
-    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriverMixin,
+    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriver,
                        'prepare_port_filter')
     def test_update_port_filter_new_port(self, mock_method):
         mock_port = self._get_port()
@@ -126,9 +126,9 @@ class TestHyperVSecurityGroupsDriverMixin(SecurityGroupRuleTestHelper):
         self.assertNotIn(mock_port['device'], self._driver._security_ports)
         self.assertNotIn(mock_port['id'], self._driver._sec_group_rules)
 
-    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriverMixin,
+    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriver,
                        '_add_sg_port_rules')
-    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriverMixin,
+    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriver,
                        '_remove_sg_port_rules')
     def test_create_port_rules(self, mock_remove, mock_add):
         mock_rule = mock.MagicMock()
@@ -145,7 +145,7 @@ class TestHyperVSecurityGroupsDriverMixin(SecurityGroupRuleTestHelper):
         mock_remove.assert_called_once_with(self._FAKE_ID, [mock_rule])
         mock_add.assert_called_once_with(self._FAKE_ID, [mock_rule])
 
-    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriverMixin,
+    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriver,
                        '_remove_sg_port_rules')
     def test_remove_port_rules(self, mock_remove):
         mock_rule = mock.MagicMock()

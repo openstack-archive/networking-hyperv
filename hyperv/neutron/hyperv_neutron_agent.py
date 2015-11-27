@@ -24,29 +24,12 @@ import six
 
 from hyperv.common.i18n import _, _LE, _LI  # noqa
 from hyperv.neutron import constants
-from hyperv.neutron import hyperv_agent_notifier
 from hyperv.neutron import nvgre_ops
 from hyperv.neutron import utils
 from hyperv.neutron import utilsfactory
 
-nvgre_opts = [
-    cfg.BoolOpt('enable_support',
-                default=False,
-                help=_('Enables Hyper-V NVGRE. '
-                       'Requires Windows Server 2012 or above.')),
-    cfg.IntOpt('provider_vlan_id',
-               default=0,
-               help=_('Specifies the VLAN ID of the physical network, required'
-                      ' for setting the NVGRE Provider Address.')),
-    cfg.StrOpt('provider_tunnel_ip',
-               default=None,
-               help=_('Specifies the tunnel IP which will be used and '
-                      'reported by this host for NVGRE networks.')),
-]
-
 CONF = cfg.CONF
-CONF.register_opts(nvgre_opts, "NVGRE")
-
+CONF.import_group('NVGRE', 'hyperv.neutron.config')
 LOG = logging.getLogger(__name__)
 
 
@@ -79,13 +62,6 @@ networking-plugin-hyperv_agent.html
         self._network_vswitch_map = {}
         self._port_metric_retries = {}
 
-        self.plugin_rpc = None
-        self.context = None
-        self.client = None
-        self.connection = None
-        self.endpoints = None
-        self.topic = constants.AGENT_TOPIC
-
         self._nvgre_enabled = False
 
         conf = conf or {}
@@ -107,6 +83,7 @@ networking-plugin-hyperv_agent.html
             'enable_security_group', False)
 
         self._load_physical_network_mappings(self._phys_net_map)
+        self._init_nvgre()
 
     def _load_physical_network_mappings(self, phys_net_vswitch_mappings):
         self._physical_network_mappings = collections.OrderedDict()
@@ -141,15 +118,6 @@ networking-plugin-hyperv_agent.html
         self._nvgre_ops.tunnel_update(self.context,
                                       CONF.NVGRE.provider_tunnel_ip,
                                       constants.TYPE_NVGRE)
-
-        # setup Hyper-V Agent Lookup Record update consumer
-        topic = hyperv_agent_notifier.get_topic_name(
-            self.topic, constants.LOOKUP, constants.UPDATE)
-        self.connection.create_consumer(topic, self.endpoints, fanout=True)
-
-        # the created consumer is the last connection server.
-        # need to start it in order for it to consume.
-        self.connection.servers[-1].start()
 
     def get_agent_configurations(self):
         configurations = {'vswitch_mappings': self._physical_network_mappings}
@@ -426,9 +394,6 @@ networking-plugin-hyperv_agent.html
         return (resync_a | resync_b)
 
     def daemon_loop(self):
-        # init NVGRE after the RPC connection and context is created.
-        self._init_nvgre()
-
         sync = True
         ports = set()
 

@@ -279,3 +279,7 @@ class SecurityGroupRuleR2(SecurityGroupRuleBase):
 
     def __hash__(self):
         return self._cached_hash
+
+
+class HyperVSecurityGroupsDriver(HyperVSecurityGroupsDriverMixin):
+    pass

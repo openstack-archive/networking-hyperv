@@ -15,6 +15,8 @@
 
 # Topic for tunnel notifications between the plugin and agent
 AGENT_TOPIC = 'q-agent-notifier'
+AGENT_TYPE_HYPERV = 'HyperV agent'
+VIF_TYPE_HYPERV = 'hyperv'
 
 TUNNEL = 'tunnel'
 LOOKUP = 'lookup'
