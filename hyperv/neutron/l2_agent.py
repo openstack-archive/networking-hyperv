@@ -78,7 +78,7 @@ class HyperVNeutronAgent(hyperv_neutron_agent.HyperVNeutronAgentMixin):
         self._set_agent_state()
 
     def _set_agent_state(self):
-        configurations = self.get_agent_configurations()
+        configurations = self._get_agent_configurations()
         self.agent_state = {
             'binary': 'neutron-hyperv-agent',
             'host': CONF.host,
@@ -86,6 +86,18 @@ class HyperVNeutronAgent(hyperv_neutron_agent.HyperVNeutronAgentMixin):
             'agent_type': h_const.AGENT_TYPE_HYPERV,
             'topic': n_const.L2_AGENT_TOPIC,
             'start_flag': True}
+
+    def _get_agent_configurations(self):
+        configurations = {'vswitch_mappings': self._physical_network_mappings}
+        if CONF.NVGRE.enable_support:
+            configurations['arp_responder_enabled'] = False
+            configurations['tunneling_ip'] = CONF.NVGRE.provider_tunnel_ip
+            configurations['devices'] = 1
+            configurations['l2_population'] = False
+            configurations['tunnel_types'] = [h_const.TYPE_NVGRE]
+            configurations['enable_distributed_routing'] = False
+            configurations['bridge_mappings'] = {}
+        return configurations
 
     def _report_state(self):
         try:
