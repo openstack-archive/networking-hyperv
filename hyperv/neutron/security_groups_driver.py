@@ -14,6 +14,7 @@
 #    under the License.
 
 from eventlet import greenthread
+from neutron.agent import firewall
 from oslo_log import log as logging
 import six
 
@@ -281,5 +282,6 @@ class SecurityGroupRuleR2(SecurityGroupRuleBase):
         return self._cached_hash
 
 
-class HyperVSecurityGroupsDriver(HyperVSecurityGroupsDriverMixin):
+class HyperVSecurityGroupsDriver(HyperVSecurityGroupsDriverMixin,
+                                 firewall.FirewallDriver):
     pass
