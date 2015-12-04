@@ -266,8 +266,9 @@ class TestHyperVUtilsV2(base.BaseTestCase):
             mock.sentinel.vswitch_name)
         self.assertEqual(mock.sentinel.network_name, result)
 
-    @mock.patch.object(utilsv2.HyperVUtilsV2, '_get_default_setting_data')
-    def test_set_vswitch_port_vlan_id(self, mock_get_default_sd):
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_create_default_setting_data',
+                       mock.MagicMock())
+    def test_set_vswitch_port_vlan_id(self):
         self._mock_get_switch_port_alloc(found=True)
 
         mock_svc = self._utils._conn.Msvm_VirtualSystemManagementService()[0]
@@ -304,14 +305,14 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
     @mock.patch.object(utilsv2.HyperVUtilsV2, '_add_virt_feature')
     @mock.patch.object(utilsv2.HyperVUtilsV2, '_remove_virt_feature')
-    @mock.patch.object(utilsv2.HyperVUtilsV2, '_get_default_setting_data')
-    def test_set_vswitch_port_vsid(self, mock_get_default_sd, mock_rm_feat,
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_create_default_setting_data')
+    def test_set_vswitch_port_vsid(self, mock_create_default_sd, mock_rm_feat,
                                    mock_add_feat):
         mock_port_alloc = self._mock_get_switch_port_alloc()
 
         mock_vsid_settings = mock.MagicMock()
         mock_port_alloc.associators.return_value = [mock_vsid_settings]
-        mock_get_default_sd.return_value = mock_vsid_settings
+        mock_create_default_sd.return_value = mock_vsid_settings
 
         self._utils.set_vswitch_port_vsid(mock.sentinel.vsid,
                                           mock.sentinel.switch_port_name)
@@ -424,7 +425,7 @@ class TestHyperVUtilsV2(base.BaseTestCase):
 
         with mock.patch.multiple(
             self._utils,
-            _get_default_setting_data=mock.MagicMock(return_value=mock_acl),
+            _create_default_setting_data=mock.MagicMock(return_value=mock_acl),
             _add_virt_feature=mock.MagicMock()):
 
             self._utils.enable_port_metrics_collection(self._FAKE_PORT_NAME)
@@ -651,8 +652,8 @@ class TestHyperVUtilsV2R2(base.BaseTestCase):
         self._utils = utilsv2.HyperVUtilsV2R2()
         self._utils._wmi_conn = mock.MagicMock()
 
-    @mock.patch.object(utilsv2.HyperVUtilsV2R2, '_get_default_setting_data')
-    def test_create_security_acl(self, mock_get_default_setting_data):
+    @mock.patch.object(utilsv2.HyperVUtilsV2R2, '_create_default_setting_data')
+    def test_create_security_acl(self, mock_create_default_setting_data):
         sg_rule = mock.MagicMock()
         sg_rule.to_dict.return_value = {}
 
