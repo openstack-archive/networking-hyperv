@@ -119,18 +119,6 @@ networking-plugin-hyperv_agent.html
                                       CONF.NVGRE.provider_tunnel_ip,
                                       constants.TYPE_NVGRE)
 
-    def get_agent_configurations(self):
-        configurations = {'vswitch_mappings': self._physical_network_mappings}
-        if CONF.NVGRE.enable_support:
-            configurations['arp_responder_enabled'] = False
-            configurations['tunneling_ip'] = CONF.NVGRE.provider_tunnel_ip
-            configurations['devices'] = 1
-            configurations['l2_population'] = False
-            configurations['tunnel_types'] = [constants.TYPE_NVGRE]
-            configurations['enable_distributed_routing'] = False
-            configurations['bridge_mappings'] = {}
-        return configurations
-
     def _get_vswitch_for_physical_network(self, phys_network_name):
         for pattern in self._physical_network_mappings:
             if phys_network_name is None:

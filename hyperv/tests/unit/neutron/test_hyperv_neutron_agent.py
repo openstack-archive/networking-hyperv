@@ -85,25 +85,6 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent._nvgre_ops.init_notifier.assert_called_once_with(
             self.agent.context, self.agent.client)
 
-    def test_get_agent_configurations(self):
-        actual = self.agent.get_agent_configurations()
-
-        self.assertEqual(self.agent._physical_network_mappings,
-                         actual['vswitch_mappings'])
-        self.assertNotIn('tunnel_types', actual)
-        self.assertNotIn('tunneling_ip', actual)
-
-    def test_get_agent_configurations_nvgre(self):
-        self.config(enable_support=True, group='NVGRE')
-        self.config(provider_tunnel_ip=mock.sentinel.tunneling_ip,
-                    group='NVGRE')
-        actual = self.agent.get_agent_configurations()
-
-        self.assertEqual(self.agent._physical_network_mappings,
-                         actual['vswitch_mappings'])
-        self.assertEqual([constants.TYPE_NVGRE], actual['tunnel_types'])
-        self.assertEqual(mock.sentinel.tunneling_ip, actual['tunneling_ip'])
-
     def test_get_network_vswitch_map_by_port_id(self):
         net_uuid = 'net-uuid'
         self.agent._network_vswitch_map = {

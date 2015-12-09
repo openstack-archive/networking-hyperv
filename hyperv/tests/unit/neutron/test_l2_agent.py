@@ -66,7 +66,7 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent._physical_network_mappings = {}
 
     @mock.patch.object(l2_agent.HyperVNeutronAgent,
-                       'get_agent_configurations')
+                       '_get_agent_configurations')
     def test_set_agent_state(self, mock_get_config):
         mock_get_config.return_value = {mock.sentinel.key: mock.sentinel.val}
 
@@ -81,6 +81,25 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
             'start_flag': True
         }
         self.assertEqual(expected, self.agent.agent_state)
+
+    def test_get_agent_configurations(self):
+        actual = self.agent._get_agent_configurations()
+
+        self.assertEqual(self.agent._physical_network_mappings,
+                         actual['vswitch_mappings'])
+        self.assertNotIn('tunnel_types', actual)
+        self.assertNotIn('tunneling_ip', actual)
+
+    def test_get_agent_configurations_nvgre(self):
+        self.config(enable_support=True, group='NVGRE')
+        self.config(provider_tunnel_ip=mock.sentinel.tunneling_ip,
+                    group='NVGRE')
+        actual = self.agent._get_agent_configurations()
+
+        self.assertEqual(self.agent._physical_network_mappings,
+                         actual['vswitch_mappings'])
+        self.assertEqual([constants.TYPE_NVGRE], actual['tunnel_types'])
+        self.assertEqual(mock.sentinel.tunneling_ip, actual['tunneling_ip'])
 
     def test_report_state(self):
         self.agent.agent_state = {'start_flag': True}
