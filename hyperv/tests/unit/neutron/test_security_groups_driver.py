@@ -21,6 +21,7 @@ import mock
 from oslo_config import cfg
 
 from hyperv.neutron import security_groups_driver as sg_driver
+from hyperv.neutron import utils
 from hyperv.neutron import utilsfactory
 from hyperv.tests import base
 
@@ -160,10 +161,12 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
     def test_add_sg_port_rules_exception(self):
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = []
-        self._driver._utils.create_security_rules.side_effect = Exception(
-            'Generated Exception for testing.')
+        self._driver._utils.create_security_rules.side_effect = (
+            utils.HyperVException(msg='Generated Exception for testing.'))
 
-        self._driver._add_sg_port_rules(self._FAKE_ID, [mock_rule])
+        self.assertRaises(utils.HyperVException,
+                          self._driver._add_sg_port_rules,
+                          self._FAKE_ID, [mock_rule])
 
         self.assertNotIn(mock_rule,
                          self._driver._sec_group_rules[self._FAKE_ID])
@@ -184,9 +187,12 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
     def test_remove_sg_port_rules_exception(self):
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = [mock_rule]
-        self._driver._utils.remove_security_rules.side_effect = Exception(
-            'Generated Exception for testing.')
-        self._driver._remove_sg_port_rules(self._FAKE_ID, [mock_rule])
+        self._driver._utils.remove_security_rules.side_effect = (
+            utils.HyperVException(msg='Generated Exception for testing.'))
+
+        self.assertRaises(utils.HyperVException,
+                          self._driver._remove_sg_port_rules,
+                          self._FAKE_ID, [mock_rule])
 
         self.assertIn(mock_rule, self._driver._sec_group_rules[self._FAKE_ID])
 
