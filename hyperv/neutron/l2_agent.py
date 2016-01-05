@@ -47,7 +47,7 @@ class HyperVSecurityAgent(sg_rpc.SecurityGroupAgentRpc):
 
     @property
     def use_enhanced_rpc(self):
-        return False
+        return True
 
     def _setup_rpc(self):
         self.topic = topics.AGENT

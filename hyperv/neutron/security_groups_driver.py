@@ -14,6 +14,7 @@
 #    under the License.
 
 from eventlet import greenthread
+import netaddr
 from neutron.agent import firewall
 from oslo_log import log as logging
 import six
@@ -21,8 +22,14 @@ import six
 from hyperv.common.i18n import _LE, _LI  # noqa
 from hyperv.neutron import utilsfactory
 from hyperv.neutron import utilsv2
+import threading
 
 LOG = logging.getLogger(__name__)
+
+INGRESS_DIRECTION = 'ingress'
+EGRESS_DIRECTION = 'egress'
+DIRECTION_IP_PREFIX = {'ingress': 'source_ip_prefix',
+                       'egress': 'dest_ip_prefix'}
 
 ACL_PROP_MAP = {
     'direction': {'ingress': utilsv2.HyperVUtilsV2._ACL_DIR_IN,
@@ -51,6 +58,64 @@ class HyperVSecurityGroupsDriverMixin(object):
         self._sg_gen = SecurityGroupRuleGeneratorR2()
         self._sec_group_rules = {}
         self._security_ports = {}
+        self._sg_members = {}
+        self._sg_rule_templates = {}
+        self.cache_lock = threading.Lock()
+
+    def _select_sg_rules_for_port(self, port, direction):
+        sg_ids = port.get('security_groups', [])
+        port_rules = []
+        fixed_ips = port.get('fixed_ips', [])
+        for sg_id in sg_ids:
+            for rule in self._sg_rule_templates.get(sg_id, []):
+                if rule['direction'] != direction:
+                    continue
+                remote_group_id = rule.get('remote_group_id')
+                if not remote_group_id:
+                    grp_rule = rule.copy()
+                    grp_rule['security_group_id'] = sg_id
+                    port_rules.append(grp_rule)
+                    continue
+                ethertype = rule['ethertype']
+                for ip in self._sg_members[remote_group_id][ethertype]:
+                    if ip in fixed_ips:
+                        continue
+                    ip_rule = rule.copy()
+                    direction_ip_prefix = DIRECTION_IP_PREFIX[direction]
+                    ip_rule[direction_ip_prefix] = str(
+                        netaddr.IPNetwork(ip).cidr)
+                    ip_rule['security_group_id'] = sg_id
+                    port_rules.append(ip_rule)
+        return port_rules
+
+    def filter_defer_apply_on(self):
+        """Defer application of filtering rule."""
+        pass
+
+    def filter_defer_apply_off(self):
+        """Turn off deferral of rules and apply the rules now."""
+        pass
+
+    def update_security_group_rules(self, sg_id, sg_rules):
+        LOG.debug("Update rules of security group (%s)", sg_id)
+        with self.cache_lock:
+            self._sg_rule_templates[sg_id] = sg_rules
+
+    def update_security_group_members(self, sg_id, sg_members):
+        LOG.debug("Update members of security group (%s)", sg_id)
+        with self.cache_lock:
+            self._sg_members[sg_id] = sg_members
+
+    def _generate_rules(self, ports):
+        newports = {}
+        for port in ports:
+            _rules = []
+            _rules.extend(self._select_sg_rules_for_port(port,
+                                                         INGRESS_DIRECTION))
+            _rules.extend(self._select_sg_rules_for_port(port,
+                                                         EGRESS_DIRECTION))
+            newports[port['id']] = _rules
+        return newports
 
     def prepare_port_filter(self, port):
         LOG.debug('Creating port %s rules', len(port['security_group_rules']))
@@ -62,9 +127,15 @@ class HyperVSecurityGroupsDriverMixin(object):
 
             def_sg_rules = self._sg_gen.create_default_sg_rules()
             self._add_sg_port_rules(port['id'], def_sg_rules)
+            # Add provider rules
+            provider_rules = port['security_group_rules']
+            self._create_port_rules(port['id'], provider_rules)
+
+        newrules = self._generate_rules([port])
+        self._create_port_rules(port['id'], newrules[port['id']])
 
         self._security_ports[port['device']] = port
-        self._create_port_rules(port['id'], port['security_group_rules'])
+        self._sec_group_rules[port['id']] = newrules[port['id']]
 
     def _create_port_rules(self, port_id, rules):
         sg_rules = self._sg_gen.create_security_group_rules(rules)
@@ -114,24 +185,37 @@ class HyperVSecurityGroupsDriverMixin(object):
         LOG.info(_LI('Updating port rules.'))
 
         if port['device'] not in self._security_ports:
-            self.prepare_port_filter(port)
+            LOG.info(_LI("Device %(port)s not yet added."),
+                     {'port': port['id']})
             return
 
         old_port = self._security_ports[port['device']]
-        rules = old_port['security_group_rules']
-        param_port_rules = port['security_group_rules']
-
-        new_rules = [r for r in param_port_rules if r not in rules]
-        remove_rules = [r for r in rules if r not in param_port_rules]
-
-        LOG.info(_LI("Creating %(new)s new rules, removing %(old)s "
-                     "old rules."),
-                 {'new': len(new_rules), 'old': len(remove_rules)})
+        old_provider_rules = old_port['security_group_rules']
+        added_provider_rules = port['security_group_rules']
+        # Generate the rules
+        added_rules = self._generate_rules([port])
+        # Consider added provider rules (if any)
+        new_rules = [r for r in added_provider_rules
+                     if r not in old_provider_rules]
+        # Build new rules to add
+        new_rules.extend([r for r in added_rules[port['id']]
+                          if r not in self._sec_group_rules[port['id']]])
+        # Remove non provider rules
+        remove_rules = [r for r in self._sec_group_rules[port['id']]
+                        if r not in added_rules[port['id']]]
+        # Remove for non provider rules
+        remove_rules.extend([r for r in old_provider_rules
+                             if r not in added_provider_rules])
+        LOG.info(_("Creating %(new)s new rules, removing %(old)s "
+                   "old rules."),
+                 {'new': len(new_rules),
+                  'old': len(remove_rules)})
 
         self._create_port_rules(port['id'], new_rules)
         self._remove_port_rules(old_port['id'], remove_rules)
 
         self._security_ports[port['device']] = port
+        self._sec_group_rules[port['id']] = added_rules[port['id']]
 
     def remove_port_filter(self, port):
         LOG.info(_LI('Removing port filter'))
