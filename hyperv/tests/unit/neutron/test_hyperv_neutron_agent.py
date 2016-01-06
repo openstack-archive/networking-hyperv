@@ -18,6 +18,9 @@
 Unit tests for Windows Hyper-V virtual switch neutron driver
 """
 
+from concurrent import futures
+import time
+
 import mock
 
 from hyperv.neutron import constants
@@ -48,6 +51,7 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent.notifier = mock.Mock()
         self.agent._utils = mock.MagicMock()
         self.agent._nvgre_ops = mock.MagicMock()
+        self.agent._workers = mock.MagicMock()
 
     def test_load_physical_network_mappings(self):
         test_mappings = ['fakenetwork1:fake_vswitch',
@@ -390,6 +394,42 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent._utils.remove_all_security_rules.assert_called_once_with(
             mock.sentinel.port_id)
 
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_treat_vif_port')
+    def test_process_added_port(self, mock_treat_vif_port):
+        self.agent._added_ports = set()
+        details = self._get_fake_port_details()
+
+        self.agent._process_added_port(details)
+
+        mock_treat_vif_port.assert_called_once_with(
+            mock.sentinel.port_id, mock.sentinel.network_id,
+            mock.sentinel.network_type, mock.sentinel.physical_network,
+            mock.sentinel.segmentation_id, mock.sentinel.admin_state_up)
+        self.agent.plugin_rpc.update_device_up.assert_called_once_with(
+            self.agent.context, mock.sentinel.device,
+            self.agent.agent_id, self.agent._host)
+        self.assertNotIn(mock.sentinel.device, self.agent._added_ports)
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_treat_vif_port')
+    def test_process_added_port_failed(self, mock_treat_vif_port):
+        mock_treat_vif_port.side_effect = utils.HyperVException
+        self.agent._added_ports = set()
+        details = self._get_fake_port_details()
+
+        self.agent._process_added_port(details)
+        self.assertIn(mock.sentinel.device, self.agent._added_ports)
+
+    def _get_fake_port_details(self):
+        return {'device': mock.sentinel.device,
+                'port_id': mock.sentinel.port_id,
+                'network_id': mock.sentinel.network_id,
+                'network_type': mock.sentinel.network_type,
+                'physical_network': mock.sentinel.physical_network,
+                'segmentation_id': mock.sentinel.segmentation_id,
+                'admin_state_up': mock.sentinel.admin_state_up}
+
     def test_treat_devices_added_returns_true_for_missing_device(self):
         self.agent._added_ports = set([mock.sentinel.port_id])
         attrs = {'get_devices_details_list.side_effect': Exception()}
@@ -398,44 +438,28 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
         self.assertIn(mock.sentinel.port_id, self.agent._added_ports)
 
-    def mock_treat_devices_added(self, details, func_name):
-        """Mock treat devices added.
-
-        :param details: the details to return for the device
-        :param func_name: the function that should be called
-        :returns: whether the named function was called
-        """
+    def test_treat_devices_added_updates_known_port(self):
+        self.agent._added_ports = set([mock.sentinel.device])
+        details = self._get_fake_port_details()
         attrs = {'get_devices_details_list.return_value': [details]}
         self.agent.plugin_rpc.configure_mock(**attrs)
-        with mock.patch.object(self.agent, func_name) as func:
-            self.agent._treat_devices_added()
-        return func.called
 
-    def test_treat_devices_added_updates_known_port(self):
-        self.agent._added_ports = set([mock.sentinel.port_id])
-        details = {'device': mock.sentinel.port_id,
-                   'port_id': mock.sentinel.port_id,
-                   'network_id': mock.sentinel.network_id,
-                   'network_type': mock.sentinel.network_type,
-                   'physical_network': mock.sentinel.physical_network,
-                   'segmentation_id': mock.sentinel.segmentation_id,
-                   'admin_state_up': mock.sentinel.admin_state_up}
-        with mock.patch.object(self.agent.plugin_rpc,
-                               "update_device_up") as func:
-            self.assertTrue(self.mock_treat_devices_added(details,
-                                                          '_treat_vif_port'))
-            self.assertTrue(func.called)
-            self.assertNotIn(mock.sentinel.port_id, self.agent._added_ports)
+        self.agent._treat_devices_added()
+
+        self.agent._workers.submit.assert_called_once_with(
+            self.agent._process_added_port, details)
+        self.assertNotIn(mock.sentinel.device, self.agent._added_ports)
 
     def test_treat_devices_added_missing_port_id(self):
         self.agent._added_ports = set([mock.sentinel.port_id])
         details = {'device': mock.sentinel.port_id}
-        with mock.patch.object(self.agent.plugin_rpc,
-                               "update_device_up") as func:
-            self.assertFalse(self.mock_treat_devices_added(details,
-                                                           '_treat_vif_port'))
-            self.assertFalse(func.called)
-            self.assertNotIn(mock.sentinel.port_id, self.agent._added_ports)
+        attrs = {'get_devices_details_list.return_value': [details]}
+        self.agent.plugin_rpc.configure_mock(**attrs)
+
+        self.agent._treat_devices_added()
+
+        self.assertFalse(self.agent._workers.submit.called)
+        self.assertNotIn(mock.sentinel.port_id, self.agent._added_ports)
 
     def test_treat_devices_removed_exception(self):
         self.agent._removed_ports = set([mock.sentinel.port_id])
@@ -491,3 +515,14 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
                            args=(self.agent._process_removed_port_event, ))]
         mock_Thread.assert_has_calls(calls, any_order=True)
         self.assertEqual(2, mock_Thread.return_value.start.call_count)
+
+    def test_thread_pool_execution(self):
+        pool = futures.ThreadPoolExecutor(max_workers=3)
+        mock_fn = mock.MagicMock()
+
+        for i in range(8):
+            pool.submit(mock_fn, mock.sentinel.parameter)
+
+        # allow the threads to finish. one second is enough for a noop call.
+        time.sleep(1)
+        mock_fn.assert_has_calls([mock.call(mock.sentinel.parameter)] * 8)
