@@ -268,7 +268,7 @@ networking-plugin-hyperv_agent.html
             return
 
         LOG.debug("Unbinding port %s", port_id)
-        self._utils.disconnect_switch_port(port_id, vnic_deleted, True)
+        self._utils.remove_switch_port(port_id, vnic_deleted)
         map['ports'].remove(port_id)
 
         if not map['ports']:

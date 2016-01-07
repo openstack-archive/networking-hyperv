@@ -14,11 +14,16 @@
 #    under the License.
 
 import re
+import sys
 
 from eventlet import greenthread
 
 from hyperv.common.i18n import _  # noqa
 from hyperv.neutron import utils
+
+# Check needed for unit testing on Unix
+if sys.platform == 'win32':
+    import wmi
 
 
 class HyperVUtilsV2(utils.HyperVUtils):
@@ -166,22 +171,23 @@ class HyperVUtilsV2(utils.HyperVUtils):
             FeatureSettings=[f.path_() for f in feature_resources])
         self._check_job_status(ret_val, job_path)
 
-    def disconnect_switch_port(self, switch_port_name, vnic_deleted,
-                               delete_port):
-        """Disconnects the switch port."""
+    def remove_switch_port(self, switch_port_name, vnic_deleted):
+        """Removes the switch port."""
         sw_port, found = self._get_switch_port_allocation(switch_port_name)
         if not sw_port:
             # Port not found. It happens when the VM was already deleted.
             return
 
-        if delete_port:
-            self._remove_virt_resource(sw_port)
-            self._switch_ports.pop(switch_port_name, None)
-            self._vlan_sds.pop(sw_port.InstanceID, None)
-            self._vsid_sds.pop(sw_port.InstanceID, None)
-        else:
-            sw_port.EnabledState = self._STATE_DISABLED
-            self._modify_virt_resource(sw_port)
+        if not vnic_deleted:
+            try:
+                self._remove_virt_resource(sw_port)
+            except wmi.x_wmi:
+                # port may have already been destroyed by Hyper-V
+                pass
+
+        self._switch_ports.pop(switch_port_name, None)
+        self._vlan_sds.pop(sw_port.InstanceID, None)
+        self._vsid_sds.pop(sw_port.InstanceID, None)
 
     def _get_vswitch(self, vswitch_name):
         if vswitch_name in self._switches:

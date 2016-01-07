@@ -270,14 +270,14 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
         with mock.patch.object(
                 self.agent._utils,
-                'disconnect_switch_port') as mock_disconnect_switch_port:
+                'remove_switch_port') as mock_remove_switch_port:
             self.agent._port_unbound(self._FAKE_PORT_ID, vnic_deleted=False)
 
             if net_uuid:
-                mock_disconnect_switch_port.assert_called_once_with(
-                    self._FAKE_PORT_ID, False, True)
+                mock_remove_switch_port.assert_called_once_with(
+                    self._FAKE_PORT_ID, False)
             else:
-                self.assertFalse(mock_disconnect_switch_port.called)
+                self.assertFalse(mock_remove_switch_port.called)
 
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        '_reclaim_local_network')

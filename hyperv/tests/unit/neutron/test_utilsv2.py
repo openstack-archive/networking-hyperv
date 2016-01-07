@@ -203,31 +203,20 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self.addCleanup(patched.stop)
         return mock_port
 
-    def test_disconnect_switch_port_delete_port(self):
-        self._test_disconnect_switch_port(True)
-
-    def test_disconnect_switch_port_modify_port(self):
-        self._test_disconnect_switch_port(False)
-
-    def _test_disconnect_switch_port(self, delete_port):
+    @mock.patch.object(utilsv2.HyperVUtilsV2, '_remove_virt_resource')
+    @mock.patch.object(utilsv2, 'wmi', create=True)
+    def test_remove_switch_port(self, mock_wmi, mock_rm_virt_resource):
         mock_sw_port = self._mock_get_switch_port_alloc()
         self._utils._switch_ports[self._FAKE_PORT_NAME] = mock_sw_port
         self._utils._vlan_sds[mock_sw_port.InstanceID] = mock.MagicMock()
+        mock_wmi.x_wmi = Exception
+        mock_rm_virt_resource.side_effect = mock_wmi.x_wmi
 
-        if delete_port:
-            self._utils._remove_virt_resource = mock.MagicMock()
-        else:
-            self._utils._modify_virt_resource = mock.MagicMock()
+        self._utils.remove_switch_port(self._FAKE_PORT_NAME, False)
 
-        self._utils.disconnect_switch_port(self._FAKE_PORT_NAME,
-                                           True, delete_port)
-
-        if delete_port:
-            self._utils._remove_virt_resource.assert_called_with(mock_sw_port)
-            self.assertNotIn(self._FAKE_PORT_NAME, self._utils._switch_ports)
-            self.assertNotIn(mock_sw_port.InstanceID, self._utils._vlan_sds)
-        else:
-            self._utils._modify_virt_resource.assert_called_with(mock_sw_port)
+        mock_rm_virt_resource.assert_called_once_with(mock_sw_port)
+        self.assertNotIn(self._FAKE_PORT_NAME, self._utils._switch_ports)
+        self.assertNotIn(mock_sw_port.InstanceID, self._utils._vlan_sds)
 
     def test_get_vswitch(self):
         self._utils._conn.Msvm_VirtualEthernetSwitch.return_value = [
