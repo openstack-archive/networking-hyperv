@@ -371,6 +371,9 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         with mock.patch.object(self.agent, '_port_unbound') as func:
             self.assertFalse(self.agent._treat_devices_removed([{}]))
         self.assertEqual(func.called, not port_exists)
+        self.assertEqual(
+            self.agent.sec_groups_agent.remove_devices_filter.called,
+            not port_exists)
 
     def test_treat_devices_removed_unbinds_port(self):
         self.mock_treat_devices_removed(False)
