@@ -137,6 +137,7 @@ class HyperVSecurityGroupsDriverMixin(object):
         LOG.info(_LI('Removing port filter'))
         self._security_ports.pop(port['device'], None)
         self._sec_group_rules.pop(port['id'], None)
+        self._utils.clear_port_sg_acls_cache(port['id'])
 
     def security_group_updated(self, action_type, sec_group_ids,
                                device_id=None):

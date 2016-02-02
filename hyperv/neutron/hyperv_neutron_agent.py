@@ -151,15 +151,15 @@ networking-plugin-hyperv_agent.html
 
     def port_update(self, context, port=None, network_type=None,
                     segmentation_id=None, physical_network=None):
-        LOG.debug("port_update received")
-        if self.enable_security_groups:
-            if 'security_groups' in port:
-                self.sec_groups_agent.refresh_firewall()
+        LOG.debug("port_update received: %s", port['id'])
 
-        self._treat_vif_port(
-            port['id'], port['network_id'],
-            network_type, physical_network,
-            segmentation_id, port['admin_state_up'])
+        if self._utils.vnic_port_exists(port['id']):
+            self._treat_vif_port(
+                port['id'], port['network_id'],
+                network_type, physical_network,
+                segmentation_id, port['admin_state_up'])
+        else:
+            LOG.debug("No port %s defined on agent.", port['id'])
 
     def tunnel_update(self, context, **kwargs):
         LOG.info(_LI('tunnel_update received: kwargs: %s'), kwargs)
@@ -304,14 +304,18 @@ networking-plugin-hyperv_agent.html
     def _treat_vif_port(self, port_id, network_id, network_type,
                         physical_network, segmentation_id,
                         admin_state_up):
-        if self._utils.vnic_port_exists(port_id):
-            if admin_state_up:
-                self._port_bound(port_id, network_id, network_type,
-                                 physical_network, segmentation_id)
+        if admin_state_up:
+            self._port_bound(port_id, network_id, network_type,
+                             physical_network, segmentation_id)
+            # check if security groups is enabled.
+            # if not, teardown the security group rules
+            if self.enable_security_groups:
+                self.sec_groups_agent.prepare_devices_filter([port_id])
             else:
-                self._port_unbound(port_id)
+                self._utils.remove_all_security_rules(port_id)
         else:
-            LOG.debug("No port %s defined on agent.", port_id)
+            self._port_unbound(port_id)
+            self.sec_groups_agent.remove_devices_filter([port_id])
 
     def _treat_devices_added(self, devices):
         try:
@@ -341,13 +345,6 @@ networking-plugin-hyperv_agent.html
                     device_details['segmentation_id'],
                     device_details['admin_state_up'])
 
-                # check if security groups is enabled.
-                # if not, teardown the security group rules
-                if self.enable_security_groups:
-                    self.sec_groups_agent.prepare_devices_filter([device])
-                else:
-                    self._utils.remove_all_security_rules(
-                        device_details['port_id'])
                 self.plugin_rpc.update_device_up(self.context,
                                                  device,
                                                  self.agent_id,

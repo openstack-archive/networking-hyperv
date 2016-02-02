@@ -107,6 +107,33 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.assertIsNone(network)
         self.assertIsNone(port_map)
 
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_treat_vif_port')
+    def test_port_update_not_found(self, mock_treat_vif_port):
+        self.agent._utils.vnic_port_exists.return_value = False
+        port = {'id': mock.sentinel.port_id}
+        self.agent.port_update(self.agent.context, port)
+
+        self.assertFalse(mock_treat_vif_port.called)
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_treat_vif_port')
+    def test_port_update(self, mock_treat_vif_port):
+        self.agent._utils.vnic_port_exists.return_value = True
+        port = {'id': mock.sentinel.port_id,
+                'network_id': mock.sentinel.network_id,
+                'admin_state_up': mock.sentinel.admin_state_up}
+
+        self.agent.port_update(self.agent.context, port,
+                               mock.sentinel.network_type,
+                               mock.sentinel.segmentation_id,
+                               mock.sentinel.physical_network)
+
+        mock_treat_vif_port.assert_called_once_with(
+            mock.sentinel.port_id, mock.sentinel.network_id,
+            mock.sentinel.network_type, mock.sentinel.physical_network,
+            mock.sentinel.segmentation_id, mock.sentinel.admin_state_up)
+
     def test_lookup_update(self):
         kwargs = {'lookup_ip': mock.sentinel.lookup_ip,
                   'lookup_details': mock.sentinel.lookup_details}
@@ -322,6 +349,46 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
                 self.agent._port_enable_control_metrics()
 
         self.assertNotIn(self._FAKE_PORT_ID, self.agent._port_metric_retries)
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_port_unbound')
+    def test_vif_port_state_down(self, mock_port_unbound):
+        self.agent._treat_vif_port(
+            mock.sentinel.port_id, mock.sentinel.network_id,
+            mock.sentinel.network_type, mock.sentinel.physical_network,
+            mock.sentinel.segmentation_id, False)
+
+        mock_port_unbound.assert_called_once_with(mock.sentinel.port_id)
+        sg_agent = self.agent.sec_groups_agent
+        sg_agent.remove_devices_filter.assert_called_once_with(
+            [mock.sentinel.port_id])
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_port_bound')
+    def _check_treat_vif_port_state_up(self, mock_port_bound):
+        self.agent._treat_vif_port(
+            mock.sentinel.port_id, mock.sentinel.network_id,
+            mock.sentinel.network_type, mock.sentinel.physical_network,
+            mock.sentinel.segmentation_id, True)
+
+        mock_port_bound.assert_called_once_with(
+            mock.sentinel.port_id, mock.sentinel.network_id,
+            mock.sentinel.network_type, mock.sentinel.physical_network,
+            mock.sentinel.segmentation_id)
+
+    def test_treat_vif_port_sg_enabled(self):
+        self.agent.enable_security_groups = True
+        self._check_treat_vif_port_state_up()
+
+        sg_agent = self.agent.sec_groups_agent
+        sg_agent.prepare_devices_filter.assert_called_once_with(
+            [mock.sentinel.port_id])
+
+    def test_treat_vif_port_sg_disabled(self):
+        self.agent.enable_security_groups = False
+        self._check_treat_vif_port_state_up()
+        self.agent._utils.remove_all_security_rules.assert_called_once_with(
+            mock.sentinel.port_id)
 
     def test_treat_devices_added_returns_true_for_missing_device(self):
         attrs = {'get_devices_details_list.side_effect': Exception()}

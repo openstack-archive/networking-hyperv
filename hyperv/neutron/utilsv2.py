@@ -123,6 +123,9 @@ class HyperVUtilsV2(utils.HyperVUtils):
             port.ElementName: port for port in
             self._conn.Msvm_EthernetPortAllocationSettingData()}
 
+    def clear_port_sg_acls_cache(self, switch_port_name):
+        self._sg_acl_sds.pop(switch_port_name, None)
+
     def connect_vnic_to_vswitch(self, vswitch_name, switch_port_name):
         port, found = self._get_switch_port_allocation(switch_port_name, True)
         if found and port.HostResource and port.HostResource[0]:

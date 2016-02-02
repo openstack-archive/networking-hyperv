@@ -99,6 +99,11 @@ class TestHyperVUtilsV2(base.BaseTestCase):
         self.assertEqual({mock.sentinel.port_name: mock_port},
                          self._utils._switch_ports)
 
+    def test_clear_port_sg_acls_cache(self):
+        self._utils._sg_acl_sds[mock.sentinel.port_id] = [mock.sentinel.acl]
+        self._utils.clear_port_sg_acls_cache(mock.sentinel.port_id)
+        self.assertNotIn(mock.sentinel.acl, self._utils._sg_acl_sds)
+
     def test_connect_vnic_to_vswitch_found(self):
         self._test_connect_vnic_to_vswitch(True)
 
