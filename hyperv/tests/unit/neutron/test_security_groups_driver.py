@@ -302,7 +302,7 @@ class SecurityGroupRuleGeneratorR2TestCase(SecurityGroupRuleR2BaseTestCase):
         sg_rule1 = self._create_sg_rule(self._acl('protocol', 'tcp'))
         sg_rule2 = self._create_sg_rule(self._acl('protocol', 'udp'))
         sg_rule3 = self._create_sg_rule(self._acl('protocol', 'icmp'))
-        sg_rule4 = self._create_sg_rule(self._acl('protocol', 'icmpv6'))
+        sg_rule4 = self._create_sg_rule(self._acl('protocol', 'ipv6-icmp'))
 
         rule = self._create_security_rule()
         rule['protocol'] = sg_driver.ACL_PROP_MAP["default"]
@@ -382,8 +382,8 @@ class SecurityGroupRuleR2TestCase(SecurityGroupRuleR2BaseTestCase):
         sg_rule = self._create_sg_rule(self._acl('protocol', 'icmp'))
         self.assertFalse(sg_rule.Stateful)
 
-    def test_stateful_icmpv6(self):
-        sg_rule = self._create_sg_rule(self._acl('protocol', 'icmpv6'))
+    def test_stateful_ipv6_icmp(self):
+        sg_rule = self._create_sg_rule(self._acl('protocol', 'ipv6-icmp'))
         self.assertFalse(sg_rule.Stateful)
 
     def test_stateful_deny(self):

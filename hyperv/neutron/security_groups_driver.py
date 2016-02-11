@@ -32,7 +32,7 @@ ACL_PROP_MAP = {
     'protocol': {'tcp': utilsv2.HyperVUtilsV2._TCP_PROTOCOL,
                  'udp': utilsv2.HyperVUtilsV2._UDP_PROTOCOL,
                  'icmp': utilsv2.HyperVUtilsV2._ICMP_PROTOCOL,
-                 'icmpv6': utilsv2.HyperVUtilsV2._ICMPV6_PROTOCOL},
+                 'ipv6-icmp': utilsv2.HyperVUtilsV2._ICMPV6_PROTOCOL},
     'action': {'allow': utilsv2.HyperVUtilsV2._ACL_ACTION_ALLOW,
                'deny': utilsv2.HyperVUtilsV2._ACL_ACTION_DENY},
     'default': "ANY",
@@ -264,7 +264,7 @@ class SecurityGroupRuleR2(SecurityGroupRuleBase):
     def __init__(self, direction, local_port, protocol, remote_addr,
                  action=ACL_PROP_MAP['action']['allow']):
         is_not_icmp = protocol not in [ACL_PROP_MAP['protocol']['icmp'],
-                                       ACL_PROP_MAP['protocol']['icmpv6']]
+                                       ACL_PROP_MAP['protocol']['ipv6-icmp']]
 
         self.Direction = direction
         self.Action = action
