@@ -15,6 +15,7 @@
 #    under the License.
 
 import collections
+from concurrent import futures
 import re
 import threading
 import time
@@ -74,6 +75,7 @@ networking-plugin-hyperv_agent.html
         self._polling_interval = agent_conf.get('polling_interval', 2)
         self._local_network_vswitch = agent_conf.get('local_network_vswitch',
                                                      'private')
+        self._worker_count = agent_conf.get('worker_count')
         self._phys_net_map = agent_conf.get(
             'physical_network_vswitch_mappings', [])
         self.enable_metrics_collection = agent_conf.get(
@@ -85,6 +87,7 @@ networking-plugin-hyperv_agent.html
 
         self._load_physical_network_mappings(self._phys_net_map)
         self._init_nvgre()
+        self._workers = futures.ThreadPoolExecutor(self._worker_count)
 
     def _load_physical_network_mappings(self, phys_net_vswitch_mappings):
         self._physical_network_mappings = collections.OrderedDict()
@@ -318,6 +321,31 @@ networking-plugin-hyperv_agent.html
             self._port_unbound(port_id)
             self.sec_groups_agent.remove_devices_filter([port_id])
 
+    def _process_added_port(self, device_details):
+        device = device_details['device']
+        port_id = device_details['port_id']
+
+        try:
+            self._treat_vif_port(port_id,
+                                 device_details['network_id'],
+                                 device_details['network_type'],
+                                 device_details['physical_network'],
+                                 device_details['segmentation_id'],
+                                 device_details['admin_state_up'])
+
+            self.plugin_rpc.update_device_up(self.context,
+                                             device,
+                                             self.agent_id,
+                                             self._host)
+            LOG.info("Port %s processed.", port_id)
+        except Exception as ex:
+            LOG.error(_LE("Exception encountered while processing port "
+                          "%(port)s. Exception: %(exception)s"),
+                      {'port': port_id, 'exception': ex})
+
+            # readd the port as "added", so it can be reprocessed.
+            self._added_ports.add(device)
+
     def _treat_devices_added(self):
         try:
             devices_details_list = self.plugin_rpc.get_devices_details_list(
@@ -337,21 +365,11 @@ networking-plugin-hyperv_agent.html
                 LOG.info(_LI("Port %(device)s updated. Details: "
                              "%(device_details)s"),
                          {'device': device, 'device_details': device_details})
-                self._treat_vif_port(
-                    device_details['port_id'],
-                    device_details['network_id'],
-                    device_details['network_type'],
-                    device_details['physical_network'],
-                    device_details['segmentation_id'],
-                    device_details['admin_state_up'])
 
-                self.plugin_rpc.update_device_up(self.context,
-                                                 device,
-                                                 self.agent_id,
-                                                 self._host)
+                self._workers.submit(self._process_added_port, device_details)
 
-            # if the port bind was successful, remove the port from added ports
-            # set, so it doesn't get reprocessed.
+            # remove the port from added ports set, so it doesn't get
+            # reprocessed.
             self._added_ports.discard(device)
 
     def _treat_devices_removed(self):

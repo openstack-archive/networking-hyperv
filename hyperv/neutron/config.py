@@ -33,7 +33,7 @@ HYPERV_AGENT_OPTS = [
                help=_("The number of seconds the agent will wait between "
                       "polling for local device changes.")),
     cfg.IntOpt('worker_count', default=10,
-               help=_("The number of worker processes allowed to run in "
+               help=_("The number of worker threads allowed to run in "
                       "parallel to process port binding.")),
     cfg.IntOpt('worker_retry', default=3,
                help=_("The number of times worker process will retry "
