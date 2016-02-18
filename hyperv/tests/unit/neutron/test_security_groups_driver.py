@@ -18,11 +18,11 @@ Unit tests for the Hyper-V Security Groups Driver.
 """
 
 import mock
+from os_win import exceptions
+from os_win import utilsfactory
 from oslo_config import cfg
 
 from hyperv.neutron import security_groups_driver as sg_driver
-from hyperv.neutron import utils
-from hyperv.neutron import utilsfactory
 from hyperv.tests import base
 
 CONF = cfg.CONF
@@ -69,9 +69,10 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
 
     def setUp(self):
         super(TestHyperVSecurityGroupsDriver, self).setUp()
-        self._mock_windows_version = mock.patch.object(utilsfactory,
-                                                       'get_hypervutils')
-        self._mock_windows_version.start()
+        utilsfactory_patcher = mock.patch.object(utilsfactory, '_get_class')
+        utilsfactory_patcher.start()
+        self.addCleanup(utilsfactory_patcher.stop)
+
         self._driver = sg_driver.HyperVSecurityGroupsDriver()
         self._driver._utils = mock.MagicMock()
         self._driver._sg_gen = mock.MagicMock()
@@ -263,9 +264,9 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = []
         self._driver._utils.create_security_rules.side_effect = (
-            utils.HyperVException(msg='Generated Exception for testing.'))
+            exceptions.HyperVException(msg='Generated Exception for testing.'))
 
-        self.assertRaises(utils.HyperVException,
+        self.assertRaises(exceptions.HyperVException,
                           self._driver._add_sg_port_rules,
                           self._FAKE_ID, [mock_rule])
 
@@ -289,9 +290,9 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = [mock_rule]
         self._driver._utils.remove_security_rules.side_effect = (
-            utils.HyperVException(msg='Generated Exception for testing.'))
+            exceptions.HyperVException(msg='Generated Exception for testing.'))
 
-        self.assertRaises(utils.HyperVException,
+        self.assertRaises(exceptions.HyperVException,
                           self._driver._remove_sg_port_rules,
                           self._FAKE_ID, [mock_rule])
 

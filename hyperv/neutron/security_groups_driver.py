@@ -16,12 +16,12 @@
 from eventlet import greenthread
 import netaddr
 from neutron.agent import firewall
+from os_win.utils.network import networkutils
+from os_win import utilsfactory
 from oslo_log import log as logging
 import six
 
 from hyperv.common.i18n import _LE, _LI  # noqa
-from hyperv.neutron import utilsfactory
-from hyperv.neutron import utilsv2
 import threading
 
 LOG = logging.getLogger(__name__)
@@ -32,16 +32,16 @@ DIRECTION_IP_PREFIX = {'ingress': 'source_ip_prefix',
                        'egress': 'dest_ip_prefix'}
 
 ACL_PROP_MAP = {
-    'direction': {'ingress': utilsv2.HyperVUtilsV2._ACL_DIR_IN,
-                  'egress': utilsv2.HyperVUtilsV2._ACL_DIR_OUT},
-    'ethertype': {'IPv4': utilsv2.HyperVUtilsV2._ACL_TYPE_IPV4,
-                  'IPv6': utilsv2.HyperVUtilsV2._ACL_TYPE_IPV6},
-    'protocol': {'tcp': utilsv2.HyperVUtilsV2._TCP_PROTOCOL,
-                 'udp': utilsv2.HyperVUtilsV2._UDP_PROTOCOL,
-                 'icmp': utilsv2.HyperVUtilsV2._ICMP_PROTOCOL,
-                 'ipv6-icmp': utilsv2.HyperVUtilsV2._ICMPV6_PROTOCOL},
-    'action': {'allow': utilsv2.HyperVUtilsV2._ACL_ACTION_ALLOW,
-               'deny': utilsv2.HyperVUtilsV2._ACL_ACTION_DENY},
+    'direction': {'ingress': networkutils.NetworkUtils._ACL_DIR_IN,
+                  'egress': networkutils.NetworkUtils._ACL_DIR_OUT},
+    'ethertype': {'IPv4': networkutils.NetworkUtils._ACL_TYPE_IPV4,
+                  'IPv6': networkutils.NetworkUtils._ACL_TYPE_IPV6},
+    'protocol': {'tcp': networkutils.NetworkUtils._TCP_PROTOCOL,
+                 'udp': networkutils.NetworkUtils._UDP_PROTOCOL,
+                 'icmp': networkutils.NetworkUtils._ICMP_PROTOCOL,
+                 'ipv6-icmp': networkutils.NetworkUtils._ICMPV6_PROTOCOL},
+    'action': {'allow': networkutils.NetworkUtils._ACL_ACTION_ALLOW,
+               'deny': networkutils.NetworkUtils._ACL_ACTION_DENY},
     'default': "ANY",
     'address_default': {'IPv4': '0.0.0.0/0', 'IPv6': '::/0'}
 }
@@ -54,13 +54,17 @@ class HyperVSecurityGroupsDriverMixin(object):
     """
 
     def __init__(self):
-        self._utils = utilsfactory.get_hypervutils()
+        self._utils = utilsfactory.get_networkutils()
         self._sg_gen = SecurityGroupRuleGeneratorR2()
         self._sec_group_rules = {}
         self._security_ports = {}
         self._sg_members = {}
         self._sg_rule_templates = {}
         self.cache_lock = threading.Lock()
+
+        # TODO(claudiub): remove this on the next os-win release.
+        clear_cache = lambda port_id: self._utils._sg_acl_sds.pop(port_id)
+        self._utils.clear_port_sg_acls_cache = clear_cache
 
     def _select_sg_rules_for_port(self, port, direction):
         sg_ids = port.get('security_groups', [])

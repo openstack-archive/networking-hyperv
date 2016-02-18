@@ -22,11 +22,11 @@ from concurrent import futures
 import time
 
 import mock
+from os_win import utilsfactory
 
 from hyperv.neutron import constants
+from hyperv.neutron import exception
 from hyperv.neutron import hyperv_neutron_agent
-from hyperv.neutron import utils
-from hyperv.neutron import utilsfactory
 from hyperv.tests import base
 
 
@@ -36,12 +36,13 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
     def setUp(self):
         super(TestHyperVNeutronAgent, self).setUp()
-
-        utilsfactory._get_windows_version = mock.MagicMock(
-            return_value='6.1.0')
+        utilsfactory_patcher = mock.patch.object(utilsfactory, '_get_class')
+        utilsfactory_patcher.start()
+        self.addCleanup(utilsfactory_patcher.stop)
 
         self.agent = hyperv_neutron_agent.HyperVNeutronAgentMixin()
         self.agent.plugin_rpc = mock.Mock()
+        self.agent._metricsutils = mock.MagicMock()
         self.agent._utils = mock.MagicMock()
         self.agent.sec_groups_agent = mock.MagicMock()
         self.agent.context = mock.Mock()
@@ -74,7 +75,8 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
     @mock.patch.object(hyperv_neutron_agent.nvgre_ops, 'HyperVNvgreOps')
     def test_init_nvgre_no_tunnel_ip(self, mock_hyperv_nvgre_ops):
         self.config(enable_support=True, group='NVGRE')
-        self.assertRaises(utils.HyperVException, self.agent._init_nvgre)
+        self.assertRaises(exception.NetworkingHyperVException,
+                          self.agent._init_nvgre)
 
     @mock.patch.object(hyperv_neutron_agent.nvgre_ops, 'HyperVNvgreOps')
     def test_init_nvgre_enabled(self, mock_hyperv_nvgre_ops):
@@ -166,7 +168,8 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        "_get_vswitch_name")
     def test_provision_network_exception(self, mock_get_vswitch_name):
-        self.assertRaises(utils.HyperVException, self.agent._provision_network,
+        self.assertRaises(exception.NetworkingHyperVException,
+                          self.agent._provision_network,
                           mock.sentinel.FAKE_PORT_ID,
                           mock.sentinel.FAKE_NET_UUID,
                           mock.sentinel.FAKE_NETWORK_TYPE,
@@ -179,7 +182,6 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        "_get_vswitch_name")
     def test_provision_network_vlan(self, mock_get_vswitch_name):
-        vswitch_name = mock_get_vswitch_name.return_value
         self.agent._provision_network(mock.sentinel.FAKE_PORT_ID,
                                       mock.sentinel.FAKE_NET_UUID,
                                       constants.TYPE_VLAN,
@@ -188,10 +190,6 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         mock_get_vswitch_name.assert_called_once_with(
             constants.TYPE_VLAN,
             mock.sentinel.FAKE_PHYSICAL_NETWORK)
-        set_switch = self.agent._utils.set_switch_external_port_trunk_vlan
-        set_switch.assert_called_once_with(vswitch_name,
-                                           mock.sentinel.FAKE_SEGMENTATION_ID,
-                                           constants.TRUNK_ENDPOINT_MODE)
 
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        "_get_vswitch_name")
@@ -246,18 +244,12 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
     def _test_port_bound(self, enable_metrics):
         port = mock.MagicMock()
-        mock_enable_metrics = mock.MagicMock()
         net_uuid = 'my-net-uuid'
 
-        with mock.patch.multiple(
-                self.agent._utils,
-                connect_vnic_to_vswitch=mock.MagicMock(),
-                set_vswitch_port_vlan_id=mock.MagicMock(),
-                enable_port_metrics_collection=mock_enable_metrics):
+        self.agent._port_bound(port, net_uuid, 'vlan', None, None)
 
-            self.agent._port_bound(port, net_uuid, 'vlan', None, None)
-
-            self.assertEqual(enable_metrics, mock_enable_metrics.called)
+        self.assertEqual(enable_metrics,
+                         self.agent._utils.add_metrics_collection_acls.called)
 
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        '_provision_network')
@@ -326,15 +318,12 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent._port_metric_retries[self._FAKE_PORT_ID] = (
             self.agent._metrics_max_retries)
 
-        with mock.patch.multiple(self.agent._utils,
-                                 can_enable_control_metrics=mock.MagicMock(),
-                                 enable_control_metrics=mock.MagicMock()):
+        self.agent._utils.is_metrics_collection_allowed.return_value = True
+        self.agent._port_enable_control_metrics()
 
-            self.agent._utils.can_enable_control_metrics.return_value = True
-            self.agent._port_enable_control_metrics()
-            self.agent._utils.enable_control_metrics.assert_called_with(
-                self._FAKE_PORT_ID)
-
+        enable_port_metrics_collection = (
+            self.agent._metricsutils.enable_port_metrics_collection)
+        enable_port_metrics_collection.assert_called_with(self._FAKE_PORT_ID)
         self.assertNotIn(self._FAKE_PORT_ID, self.agent._port_metric_retries)
 
     def test_port_enable_control_metrics_maxed(self):
@@ -342,15 +331,11 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent._metrics_max_retries = 3
         self.agent._port_metric_retries[self._FAKE_PORT_ID] = 3
 
-        with mock.patch.multiple(self.agent._utils,
-                                 can_enable_control_metrics=mock.MagicMock(),
-                                 enable_control_metrics=mock.MagicMock()):
-
-            self.agent._utils.can_enable_control_metrics.return_value = False
-            for i in range(4):
-                self.assertIn(self._FAKE_PORT_ID,
-                              self.agent._port_metric_retries)
-                self.agent._port_enable_control_metrics()
+        self.agent._utils.is_metrics_collection_allowed.return_value = False
+        for i in range(4):
+            self.assertIn(self._FAKE_PORT_ID,
+                          self.agent._port_metric_retries)
+            self.agent._port_enable_control_metrics()
 
         self.assertNotIn(self._FAKE_PORT_ID, self.agent._port_metric_retries)
 
@@ -414,7 +399,7 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        '_treat_vif_port')
     def test_process_added_port_failed(self, mock_treat_vif_port):
-        mock_treat_vif_port.side_effect = utils.HyperVException
+        mock_treat_vif_port.side_effect = exception.NetworkingHyperVException
         self.agent._added_ports = set()
         details = self._get_fake_port_details()
 
