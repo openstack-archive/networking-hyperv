@@ -174,7 +174,8 @@ class HyperVSecurityGroupsDriverMixin(object):
         try:
             self._utils.remove_security_rules(port_id, sg_rules)
             for rule in sg_rules:
-                old_sg_rules.remove(rule)
+                if rule in old_sg_rules:
+                    old_sg_rules.remove(rule)
         except Exception:
             LOG.exception(_LE('Exception encountered while removing rules for '
                               'port: %s'), port_id)
