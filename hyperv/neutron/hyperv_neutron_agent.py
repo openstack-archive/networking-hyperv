@@ -338,10 +338,9 @@ networking-plugin-hyperv_agent.html
                                              self.agent_id,
                                              self._host)
             LOG.info("Port %s processed.", port_id)
-        except Exception as ex:
-            LOG.error(_LE("Exception encountered while processing port "
-                          "%(port)s. Exception: %(exception)s"),
-                      {'port': port_id, 'exception': ex})
+        except Exception:
+            LOG.exception(_LE("Exception encountered while processing port "
+                              "%s."), port_id)
 
             # readd the port as "added", so it can be reprocessed.
             self._added_ports.add(device)
