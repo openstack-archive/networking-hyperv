@@ -158,11 +158,10 @@ class HyperVSecurityGroupsDriverMixin(object):
         try:
             self._utils.create_security_rules(port_id, sg_rules)
             old_sg_rules.extend(sg_rules)
-        except Exception as ex:
-            LOG.error(_LE('Hyper-V Exception: %(hyperv_exeption)s while '
-                          'adding rules for port: %(port_id)s'),
-                      dict(hyperv_exeption=ex, port_id=port_id))
-            raise ex
+        except Exception:
+            LOG.exception(_LE('Exception encountered while adding rules for '
+                              'port: %s'), port_id)
+            raise
 
     def _remove_sg_port_rules(self, port_id, sg_rules):
         if not sg_rules:
@@ -172,11 +171,10 @@ class HyperVSecurityGroupsDriverMixin(object):
             self._utils.remove_security_rules(port_id, sg_rules)
             for rule in sg_rules:
                 old_sg_rules.remove(rule)
-        except Exception as ex:
-            LOG.error(_LE('Hyper-V Exception: %(hyperv_exeption)s while '
-                          'removing rules for port: %(port_id)s'),
-                      dict(hyperv_exeption=ex, port_id=port_id))
-            raise ex
+        except Exception:
+            LOG.exception(_LE('Exception encountered while removing rules for '
+                              'port: %s'), port_id)
+            raise
 
     def apply_port_filter(self, port):
         LOG.info(_LI('Aplying port filter.'))
