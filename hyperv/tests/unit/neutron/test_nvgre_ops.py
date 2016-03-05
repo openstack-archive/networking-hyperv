@@ -18,22 +18,27 @@ Unit tests for Windows Hyper-V NVGRE driver.
 """
 
 import mock
+from os_win import utilsfactory
+from oslo_config import cfg
 
 from hyperv.neutron import constants
 from hyperv.neutron import nvgre_ops
-from hyperv.neutron import utilsfactory
 from hyperv.tests import base
+
+CONF = cfg.CONF
 
 
 class TestHyperVNvgreOps(base.BaseTestCase):
 
     FAKE_MAC_ADDR = 'fa:ke:ma:ca:dd:re:ss'
+    FAKE_CIDR = '10.0.0.0/24'
+    FAKE_VSWITCH_NAME = 'fake_vswitch'
 
     def setUp(self):
         super(TestHyperVNvgreOps, self).setUp()
-
-        utilsfactory._get_windows_version = mock.MagicMock(
-            return_value='6.2.0')
+        utilsfactory_patcher = mock.patch.object(utilsfactory, '_get_class')
+        utilsfactory_patcher.start()
+        self.addCleanup(utilsfactory_patcher.stop)
 
         self.context = 'context'
         self.ops = nvgre_ops.HyperVNvgreOps([])
@@ -122,30 +127,65 @@ class TestHyperVNvgreOps(base.BaseTestCase):
         self.assertFalse(self.ops._hyperv_utils.set_vswitch_port_vsid.called)
 
     @mock.patch.object(nvgre_ops.HyperVNvgreOps, 'refresh_nvgre_records')
-    def test_bind_nvgre_network(self, mock_refresh_records):
+    @mock.patch.object(nvgre_ops.HyperVNvgreOps, '_create_customer_routes')
+    def test_bind_nvgre_network(self, mock_create_routes,
+                                mock_refresh_records):
         self.config(provider_tunnel_ip=mock.sentinel.ip_addr, group='NVGRE')
         self.ops._n_client.get_network_subnets.return_value = [
             mock.sentinel.subnet, mock.sentinel.subnet2]
 
         get_cidr = self.ops._n_client.get_network_subnet_cidr_and_gateway
-        get_cidr.return_value = (mock.sentinel.cidr, mock.sentinel.gateway)
+        get_cidr.return_value = (self.FAKE_CIDR, mock.sentinel.gateway)
 
         self.ops.bind_nvgre_network(
             mock.sentinel.vsid, mock.sentinel.net_uuid,
-            mock.sentinel.vswitch_name)
+            self.FAKE_VSWITCH_NAME)
 
         self.assertEqual(mock.sentinel.vsid,
                          self.ops._network_vsids[mock.sentinel.net_uuid])
         self.ops._n_client.get_network_subnets.assert_called_once_with(
             mock.sentinel.net_uuid)
         get_cidr.assert_called_once_with(mock.sentinel.subnet)
-        self.ops._nvgre_utils.create_customer_routes.assert_called_once_with(
-            mock.sentinel.vsid, mock.sentinel.vswitch_name,
-            mock.sentinel.cidr, mock.sentinel.gateway)
+        mock_create_routes.assert_called_once_with(
+            mock.sentinel.vsid, self.FAKE_CIDR,
+            mock.sentinel.gateway, mock.ANY)
         mock_refresh_records.assert_called_once_with(
             network_id=mock.sentinel.net_uuid)
         self.ops._notifier.tunnel_update.assert_called_once_with(
             self.context, mock.sentinel.ip_addr, mock.sentinel.vsid)
+
+    def _check_create_customer_routes(self, gateway=None):
+        self.ops._create_customer_routes(
+            mock.sentinel.vsid, mock.sentinel.cidr,
+            gateway, mock.sentinel.rdid)
+
+        self.ops._nvgre_utils.clear_customer_routes.assert_called_once_with(
+            mock.sentinel.vsid)
+        self.ops._nvgre_utils.create_customer_route.assert_called_once_with(
+            mock.sentinel.vsid, mock.sentinel.cidr, constants.IPV4_DEFAULT,
+            mock.sentinel.rdid)
+
+    def test_create_customer_routes_no_gw(self):
+        self._check_create_customer_routes()
+
+    def test_create_customer_routes_bad_gw(self):
+        gateway = '10.0.0.1'
+        self._check_create_customer_routes(gateway=gateway)
+
+    def test_create_customer_routes(self):
+        gateway = '10.0.0.2'
+        self.ops._create_customer_routes(
+            mock.sentinel.vsid, mock.sentinel.cidr,
+            gateway, mock.sentinel.rdid)
+
+        metadata_addr = '%s/32' % CONF.AGENT.neutron_metadata_address
+        self.ops._nvgre_utils.create_customer_route.assert_has_calls([
+            mock.call(mock.sentinel.vsid, mock.sentinel.cidr,
+                      constants.IPV4_DEFAULT, mock.sentinel.rdid),
+            mock.call(mock.sentinel.vsid, '%s/0' % constants.IPV4_DEFAULT,
+                      gateway, mock.ANY),
+            mock.call(mock.sentinel.vsid, metadata_addr,
+                      gateway, mock.ANY)], any_order=True)
 
     @mock.patch.object(nvgre_ops.HyperVNvgreOps, '_register_lookup_record')
     def test_refresh_nvgre_records(self, mock_register_record):

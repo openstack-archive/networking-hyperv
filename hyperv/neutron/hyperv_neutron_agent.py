@@ -20,15 +20,15 @@ import re
 import threading
 import time
 
+from os_win import utilsfactory
 from oslo_config import cfg
 from oslo_log import log as logging
 import six
 
 from hyperv.common.i18n import _, _LE, _LI  # noqa
 from hyperv.neutron import constants
+from hyperv.neutron import exception
 from hyperv.neutron import nvgre_ops
-from hyperv.neutron import utils
-from hyperv.neutron import utilsfactory
 
 CONF = cfg.CONF
 CONF.import_group('NVGRE', 'hyperv.neutron.config')
@@ -59,7 +59,8 @@ networking-plugin-hyperv_agent.html
         """
 
         super(HyperVNeutronAgentMixin, self).__init__()
-        self._utils = utilsfactory.get_hypervutils()
+        self._metricsutils = utilsfactory.get_metricsutils()
+        self._utils = utilsfactory.get_networkutils()
         self._utils.init_caches()
         self._network_vswitch_map = {}
         self._port_metric_retries = {}
@@ -112,7 +113,7 @@ networking-plugin-hyperv_agent.html
                         'tunnel IP is not configured. Check neutron.conf '
                         'config file.')
             LOG.error(err_msg)
-            raise utils.HyperVException(msg=err_msg)
+            raise exception.NetworkingHyperVException(err_msg)
 
         self._nvgre_enabled = True
         self._nvgre_ops = nvgre_ops.HyperVNvgreOps(
@@ -195,8 +196,8 @@ networking-plugin-hyperv_agent.html
 
         vswitch_name = self._get_vswitch_name(network_type, physical_network)
         if network_type == constants.TYPE_VLAN:
-            self._utils.set_switch_external_port_trunk_vlan(
-                vswitch_name, segmentation_id, constants.TRUNK_ENDPOINT_MODE)
+            # Nothing to do
+            pass
         elif network_type == constants.TYPE_NVGRE and self._nvgre_enabled:
             self._nvgre_ops.bind_nvgre_network(
                 segmentation_id, net_uuid, vswitch_name)
@@ -208,10 +209,10 @@ networking-plugin-hyperv_agent.html
             # or create it if not existing
             pass
         else:
-            raise utils.HyperVException(
-                msg=(_("Cannot provision unknown network type %(network_type)s"
-                       " for network %(net_uuid)s") %
-                     dict(network_type=network_type, net_uuid=net_uuid)))
+            raise exception.NetworkingHyperVException(
+                (_("Cannot provision unknown network type %(network_type)s"
+                   " for network %(net_uuid)s") %
+                 dict(network_type=network_type, net_uuid=net_uuid)))
 
         map = {
             'network_type': network_type,
@@ -261,7 +262,7 @@ networking-plugin-hyperv_agent.html
             LOG.error(_LE('Unsupported network type %s'), network_type)
 
         if self.enable_metrics_collection:
-            self._utils.enable_port_metrics_collection(port_id)
+            self._utils.add_metrics_collection_acls(port_id)
             self._port_metric_retries[port_id] = self._metrics_max_retries
 
     def _port_unbound(self, port_id, vnic_deleted=False):
@@ -283,12 +284,12 @@ networking-plugin-hyperv_agent.html
             return
 
         for port_id in list(self._port_metric_retries.keys()):
-            if self._utils.can_enable_control_metrics(port_id):
-                self._utils.enable_control_metrics(port_id)
+            if self._utils.is_metrics_collection_allowed(port_id):
+                self._metricsutils.enable_port_metrics_collection(port_id)
                 LOG.info(_LI('Port metrics enabled for port: %s'), port_id)
                 del self._port_metric_retries[port_id]
             elif self._port_metric_retries[port_id] < 1:
-                self._utils.enable_control_metrics(port_id)
+                self._metricsutils.enable_port_metrics_collection(port_id)
                 LOG.error(_LE('Port metrics raw enabling for port: %s'),
                           port_id)
                 del self._port_metric_retries[port_id]

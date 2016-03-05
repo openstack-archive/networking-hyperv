@@ -13,18 +13,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from os_win import utilsfactory
 from oslo_config import cfg
 from oslo_log import log as logging
 import six
+import uuid
 
 from hyperv.common.i18n import _LI, _LW, _LE  # noqa
 from hyperv.neutron import constants
 from hyperv.neutron import hyperv_agent_notifier
 from hyperv.neutron import neutron_client
-from hyperv.neutron import utils_nvgre
-from hyperv.neutron import utilsfactory
 
 CONF = cfg.CONF
+CONF.import_group('AGENT', 'hyperv.neutron.config')
+CONF.import_group('NVGRE', 'hyperv.neutron.config')
 
 LOG = logging.getLogger(__name__)
 
@@ -38,8 +40,8 @@ class HyperVNvgreOps(object):
         self._nvgre_ports = []
         self._network_vsids = {}
 
-        self._hyperv_utils = utilsfactory.get_hypervutils()
-        self._nvgre_utils = utils_nvgre.NvgreUtils()
+        self._hyperv_utils = utilsfactory.get_networkutils()
+        self._nvgre_utils = utilsfactory.get_nvgreutils()
         self._n_client = neutron_client.NeutronAPIClient()
 
         self._init_nvgre(physical_networks)
@@ -136,8 +138,11 @@ class HyperVNvgreOps(object):
         try:
             cidr, gw = self._n_client.get_network_subnet_cidr_and_gateway(
                 subnet)
-            self._nvgre_utils.create_customer_routes(
-                segmentation_id, vswitch_name, cidr, gw)
+
+            cust_route_string = vswitch_name + cidr + str(segmentation_id)
+            rdid_uuid = str(uuid.uuid5(uuid.NAMESPACE_X500, cust_route_string))
+            self._create_customer_routes(segmentation_id, cidr, gw, rdid_uuid)
+
         except Exception as ex:
             LOG.error(_LE("Exception caught: %s"), ex)
 
@@ -145,6 +150,30 @@ class HyperVNvgreOps(object):
         self.refresh_nvgre_records(network_id=net_uuid)
         self._notifier.tunnel_update(
             self.context, CONF.NVGRE.provider_tunnel_ip, segmentation_id)
+
+    def _create_customer_routes(self, segmentation_id, cidr, gw, rdid_uuid):
+        self._nvgre_utils.clear_customer_routes(segmentation_id)
+
+        # create cidr -> 0.0.0.0/0 customer route
+        self._nvgre_utils.create_customer_route(
+            segmentation_id, cidr, constants.IPV4_DEFAULT, rdid_uuid)
+
+        if not gw:
+            LOG.info(_LI('Subnet does not have gateway configured. '
+                         'Skipping.'))
+        elif gw.split('.')[-1] == '1':
+            LOG.error(_LE('Subnet has unsupported gateway IP ending in 1: '
+                          '%s. Any other gateway IP is supported.'), gw)
+        else:
+            # create 0.0.0.0/0 -> gateway customer route
+            self._nvgre_utils.create_customer_route(
+                segmentation_id, '%s/0' % constants.IPV4_DEFAULT, gw,
+                rdid_uuid)
+
+            # create metadata address -> gateway customer route
+            metadata_addr = '%s/32' % CONF.AGENT.neutron_metadata_address
+            self._nvgre_utils.create_customer_route(
+                segmentation_id, metadata_addr, gw, rdid_uuid)
 
     def refresh_nvgre_records(self, **kwargs):
         self._refresh_tunneling_agents()

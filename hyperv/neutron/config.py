@@ -51,7 +51,11 @@ HYPERV_AGENT_OPTS = [
                       'Hyper-V\'s port metrics collection. The agent will try '
                       'to enable the feature once every polling_interval '
                       'period for at most metrics_max_retries or until it '
-                      'succeedes.'))
+                      'succeedes.')),
+    cfg.StrOpt('neutron_metadata_address',
+               default='169.254.169.254',
+               help=_('Specifies the address which will serve the metadata for'
+                      ' the instance.')),
 ]
 
 NVGRE_OPTS = [
