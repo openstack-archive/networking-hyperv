@@ -301,10 +301,11 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
     def test_remove_sg_port_rules(self):
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = [mock_rule]
-        self._driver._remove_sg_port_rules(self._FAKE_ID, [mock_rule])
+        self._driver._remove_sg_port_rules(
+            self._FAKE_ID, [mock_rule, mock.sentinel.other_rule])
 
         self._driver._utils.remove_security_rules.assert_called_once_with(
-            self._FAKE_ID, [mock_rule])
+            self._FAKE_ID, [mock_rule, mock.sentinel.other_rule])
         self.assertNotIn(mock_rule,
                          self._driver._sec_group_rules[self._FAKE_ID])
 
