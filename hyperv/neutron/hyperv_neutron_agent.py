@@ -20,12 +20,13 @@ import re
 import threading
 import time
 
+from os_win import exceptions
 from os_win import utilsfactory
 from oslo_config import cfg
 from oslo_log import log as logging
 import six
 
-from hyperv.common.i18n import _, _LE, _LI  # noqa
+from hyperv.common.i18n import _, _LE, _LW, _LI  # noqa
 from hyperv.neutron import constants
 from hyperv.neutron import exception
 from hyperv.neutron import nvgre_ops
@@ -284,17 +285,24 @@ networking-plugin-hyperv_agent.html
             return
 
         for port_id in list(self._port_metric_retries.keys()):
-            if self._utils.is_metrics_collection_allowed(port_id):
-                self._metricsutils.enable_port_metrics_collection(port_id)
-                LOG.info(_LI('Port metrics enabled for port: %s'), port_id)
+            try:
+                if self._utils.is_metrics_collection_allowed(port_id):
+                    self._metricsutils.enable_port_metrics_collection(port_id)
+                    LOG.info(_LI('Port metrics enabled for port: %s'), port_id)
+                    del self._port_metric_retries[port_id]
+                elif self._port_metric_retries[port_id] < 1:
+                    self._metricsutils.enable_port_metrics_collection(port_id)
+                    LOG.error(_LE('Port metrics raw enabling for port: %s'),
+                              port_id)
+                    del self._port_metric_retries[port_id]
+                else:
+                    self._port_metric_retries[port_id] -= 1
+            except exceptions.NotFound:
+                # the vNIC no longer exists. it might have been removed or
+                # the VM it was attached to was destroyed.
+                LOG.warning(_LW("Port %s no longer exists. Cannot enable "
+                                "metrics."), port_id)
                 del self._port_metric_retries[port_id]
-            elif self._port_metric_retries[port_id] < 1:
-                self._metricsutils.enable_port_metrics_collection(port_id)
-                LOG.error(_LE('Port metrics raw enabling for port: %s'),
-                          port_id)
-                del self._port_metric_retries[port_id]
-            else:
-                self._port_metric_retries[port_id] -= 1
 
     def _update_ports(self, registered_ports):
         ports = self._utils.get_vnic_ids()

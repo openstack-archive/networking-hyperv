@@ -22,6 +22,7 @@ from concurrent import futures
 import time
 
 import mock
+from os_win import exceptions
 from os_win import utilsfactory
 
 from hyperv.neutron import constants
@@ -337,6 +338,15 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
                           self.agent._port_metric_retries)
             self.agent._port_enable_control_metrics()
 
+        self.assertNotIn(self._FAKE_PORT_ID, self.agent._port_metric_retries)
+
+    def test_port_enable_control_metrics_no_vnic(self):
+        self.agent.enable_metrics_collection = True
+        self.agent._port_metric_retries[self._FAKE_PORT_ID] = 3
+        self.agent._utils.is_metrics_collection_allowed.side_effect = (
+            exceptions.NotFound(resource=self._FAKE_PORT_ID))
+
+        self.agent._port_enable_control_metrics()
         self.assertNotIn(self._FAKE_PORT_ID, self.agent._port_metric_retries)
 
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
