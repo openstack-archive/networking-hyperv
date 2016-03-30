@@ -273,6 +273,17 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         self.assertNotIn(mock_rule,
                          self._driver._sec_group_rules[self._FAKE_ID])
 
+    def test_add_sg_port_rules_port_not_found(self):
+        self._driver._sec_group_rules[self._FAKE_ID] = []
+        self._driver._utils.create_security_rules.side_effect = (
+            exceptions.NotFound(resource='port_id'))
+
+        self.assertRaises(exceptions.NotFound,
+                          self._driver._add_sg_port_rules,
+                          self._FAKE_ID, [mock.sentinel.rule])
+
+        self.assertNotIn(self._FAKE_ID, self._driver._sec_group_rules)
+
     def test_add_sg_port_rules(self):
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = []
@@ -297,6 +308,17 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
                           self._FAKE_ID, [mock_rule])
 
         self.assertIn(mock_rule, self._driver._sec_group_rules[self._FAKE_ID])
+
+    def test_remove_sg_port_rules_port_not_found(self):
+        self._driver._sec_group_rules[self._FAKE_ID] = []
+        self._driver._utils.remove_security_rules.side_effect = (
+            exceptions.NotFound(resource='port_id'))
+
+        self.assertRaises(exceptions.NotFound,
+                          self._driver._remove_sg_port_rules,
+                          self._FAKE_ID, [mock.sentinel.rule])
+
+        self.assertNotIn(self._FAKE_ID, self._driver._sec_group_rules)
 
     def test_remove_sg_port_rules(self):
         mock_rule = mock.MagicMock()

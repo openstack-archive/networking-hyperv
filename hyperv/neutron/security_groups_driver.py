@@ -16,6 +16,7 @@
 from eventlet import greenthread
 import netaddr
 from neutron.agent import firewall
+from os_win import exceptions
 from os_win.utils.network import networkutils
 from os_win import utilsfactory
 from oslo_log import log as logging
@@ -163,6 +164,10 @@ class HyperVSecurityGroupsDriverMixin(object):
         try:
             self._utils.create_security_rules(port_id, sg_rules)
             old_sg_rules.extend(sg_rules)
+        except exceptions.NotFound:
+            # port no longer exists.
+            self._sec_group_rules.pop(port_id, None)
+            raise
         except Exception:
             LOG.exception(_LE('Exception encountered while adding rules for '
                               'port: %s'), port_id)
@@ -177,6 +182,10 @@ class HyperVSecurityGroupsDriverMixin(object):
             for rule in sg_rules:
                 if rule in old_sg_rules:
                     old_sg_rules.remove(rule)
+        except exceptions.NotFound:
+            # port no longer exists.
+            self._sec_group_rules.pop(port_id, None)
+            raise
         except Exception:
             LOG.exception(_LE('Exception encountered while removing rules for '
                               'port: %s'), port_id)
