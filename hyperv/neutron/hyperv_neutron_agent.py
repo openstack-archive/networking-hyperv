@@ -16,12 +16,14 @@
 
 import collections
 from concurrent import futures
+import inspect
 import re
 import threading
 import time
 
 from os_win import exceptions
 from os_win import utilsfactory
+from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_log import log as logging
 import six
@@ -34,6 +36,23 @@ from hyperv.neutron import nvgre_ops
 CONF = cfg.CONF
 CONF.import_group('NVGRE', 'hyperv.neutron.config')
 LOG = logging.getLogger(__name__)
+
+synchronized = lockutils.synchronized_with_prefix('n-hv-agent-')
+
+
+def _port_synchronized(f):
+    # This decorator synchronizes operations targeting the same port.
+    # The decorated method is expected to accept the port_id argument.
+    def wrapper(*args, **kwargs):
+        call_args = inspect.getcallargs(f, *args, **kwargs)
+        port_id = call_args['port_id']
+        lock_name = 'port-lock-%s' % port_id
+
+        @synchronized(lock_name)
+        def inner():
+            return f(*args, **kwargs)
+        return inner()
+    return wrapper
 
 
 class HyperVNeutronAgentMixin(object):
@@ -314,6 +333,7 @@ networking-plugin-hyperv_agent.html
                 'added': added,
                 'removed': removed}
 
+    @_port_synchronized
     def _treat_vif_port(self, port_id, network_id, network_type,
                         physical_network, segmentation_id,
                         admin_state_up):
@@ -342,6 +362,7 @@ networking-plugin-hyperv_agent.html
                                  device_details['segmentation_id'],
                                  device_details['admin_state_up'])
 
+            LOG.debug("Updating port %s status as UP.", port_id)
             self.plugin_rpc.update_device_up(self.context,
                                              device,
                                              self.agent_id,
