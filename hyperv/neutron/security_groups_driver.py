@@ -40,7 +40,8 @@ ACL_PROP_MAP = {
     'protocol': {'tcp': networkutils.NetworkUtils._TCP_PROTOCOL,
                  'udp': networkutils.NetworkUtils._UDP_PROTOCOL,
                  'icmp': networkutils.NetworkUtils._ICMP_PROTOCOL,
-                 'ipv6-icmp': networkutils.NetworkUtils._ICMPV6_PROTOCOL},
+                 'ipv6-icmp': networkutils.NetworkUtils._ICMPV6_PROTOCOL,
+                 'icmpv6': networkutils.NetworkUtils._ICMPV6_PROTOCOL},
     'action': {'allow': networkutils.NetworkUtils._ACL_ACTION_ALLOW,
                'deny': networkutils.NetworkUtils._ACL_ACTION_DENY},
     'default': "ANY",
@@ -278,7 +279,7 @@ class SecurityGroupRuleGeneratorR2(SecurityGroupRuleGenerator):
         protocol = self._get_rule_protocol(rule)
         if protocol == ACL_PROP_MAP['default']:
             # ANY protocols must be split up, to make stateful rules.
-            protocols = list(ACL_PROP_MAP['protocol'].values())
+            protocols = list(set(ACL_PROP_MAP['protocol'].values()))
         else:
             protocols = [protocol]
 
@@ -299,7 +300,7 @@ class SecurityGroupRuleGeneratorR2(SecurityGroupRuleGenerator):
         port = ACL_PROP_MAP['default']
         sg_rules = []
         for direction in ACL_PROP_MAP['direction'].values():
-            for protocol in ACL_PROP_MAP['protocol'].values():
+            for protocol in set(ACL_PROP_MAP['protocol'].values()):
                 for acl_type, address in ip_type_pairs:
                     sg_rules.append(SecurityGroupRuleR2(direction=direction,
                                                         local_port=port,
