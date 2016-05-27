@@ -53,14 +53,61 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
     def test_load_physical_network_mappings(self):
         test_mappings = ['fakenetwork1:fake_vswitch',
                          'fakenetwork2:fake_vswitch_2', '*:fake_vswitch_3']
-        expected = [('fakenetwork1', 'fake_vswitch'),
-                    ('fakenetwork2', 'fake_vswitch_2'),
-                    ('.*', 'fake_vswitch_3')]
+        expected = [('fakenetwork1$', 'fake_vswitch'),
+                    ('fakenetwork2$', 'fake_vswitch_2'),
+                    ('.*$', 'fake_vswitch_3')]
 
         self.agent._load_physical_network_mappings(test_mappings)
 
         self.assertEqual(expected,
                          list(self.agent._physical_network_mappings.items()))
+
+    def test_get_vswitch_for_physical_network_with_default_switch(self):
+        test_mappings = ['fakenetwork:fake_vswitch',
+                         'fakenetwork2$:fake_vswitch_2',
+                         'fakenetwork*:fake_vswitch_3']
+        self.agent._load_physical_network_mappings(test_mappings)
+
+        physnet = self.agent._get_vswitch_for_physical_network('fakenetwork')
+        self.assertEqual('fake_vswitch', physnet)
+
+        physnet = self.agent._get_vswitch_for_physical_network('fakenetwork2$')
+        self.assertEqual('fake_vswitch_2', physnet)
+
+        physnet = self.agent._get_vswitch_for_physical_network('fakenetwork3')
+        self.assertEqual('fake_vswitch_3', physnet)
+
+        physnet = self.agent._get_vswitch_for_physical_network('fakenetwork35')
+        self.assertEqual('fake_vswitch_3', physnet)
+
+        physnet = self.agent._get_vswitch_for_physical_network('fake_network1')
+        self.assertEqual('fake_network1', physnet)
+
+    def test_get_vswitch_for_physical_network_without_default_switch(self):
+        test_mappings = ['fakenetwork:fake_vswitch',
+                         'fakenetwork2:fake_vswitch_2']
+        self.agent._load_physical_network_mappings(test_mappings)
+
+        physnet = self.agent._get_vswitch_for_physical_network('fakenetwork')
+        self.assertEqual('fake_vswitch', physnet)
+
+        physnet = self.agent._get_vswitch_for_physical_network('fakenetwork2')
+        self.assertEqual('fake_vswitch_2', physnet)
+
+    def test_get_vswitch_for_physical_network_none(self):
+        test_mappings = ['fakenetwork:fake_vswitch',
+                         'fakenetwork2:fake_vswitch_2']
+        self.agent._load_physical_network_mappings(test_mappings)
+
+        physnet = self.agent._get_vswitch_for_physical_network(None)
+        self.assertEqual('', physnet)
+
+        test_mappings = ['fakenetwork:fake_vswitch',
+                         'fakenetwork2:fake_vswitch_2', '*:fake_vswitch_3']
+        self.agent._load_physical_network_mappings(test_mappings)
+
+        physnet = self.agent._get_vswitch_for_physical_network(None)
+        self.assertEqual('fake_vswitch_3', physnet)
 
     @mock.patch.object(hyperv_neutron_agent.nvgre_ops, 'HyperVNvgreOps')
     def test_init_nvgre_disabled(self, mock_hyperv_nvgre_ops):
