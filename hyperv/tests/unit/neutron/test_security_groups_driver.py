@@ -43,8 +43,8 @@ class SecurityGroupRuleTestHelper(base.BaseTestCase):
     _FAKE_PORT_MIN = 9001
     _FAKE_PORT_MAX = 9011
 
-    def _create_security_rule(self):
-        return {
+    def _create_security_rule(self, **rule_updates):
+        rule = {
             'direction': self._FAKE_DIRECTION,
             'ethertype': self._FAKE_ETHERTYPE,
             'protocol': self._FAKE_PROTOCOL,
@@ -54,6 +54,8 @@ class SecurityGroupRuleTestHelper(base.BaseTestCase):
             'port_range_max': self._FAKE_PORT_MAX,
             'security_group_id': self._FAKE_SG_ID
         }
+        rule.update(rule_updates)
+        return rule
 
     @classmethod
     def _acl(self, key1, key2):
@@ -465,15 +467,22 @@ class SecurityGroupRuleGeneratorR2TestCase(SecurityGroupRuleR2BaseTestCase):
 
         self.assertEqual(expected, actual)
 
+    def test_get_rule_protocol_icmp_ipv6(self):
+        self._check_get_rule_protocol(
+            expected=self._acl('protocol', 'ipv6-icmp'),
+            protocol='icmp',
+            ethertype='IPv6')
+
     def test_get_rule_protocol_icmp(self):
-        self._check_get_rule_protocol('icmp', self._acl('protocol', 'icmp'))
+        self._check_get_rule_protocol(expected=self._acl('protocol', 'icmp'),
+                                      protocol='icmp')
 
     def test_get_rule_protocol_no_icmp(self):
-        self._check_get_rule_protocol('tcp', 'tcp')
+        self._check_get_rule_protocol(expected='tcp',
+                                      protocol='tcp')
 
-    def _check_get_rule_protocol(self, protocol, expected):
-        rule = self._create_security_rule()
-        rule['protocol'] = protocol
+    def _check_get_rule_protocol(self, expected, **rule_updates):
+        rule = self._create_security_rule(**rule_updates)
         actual = self.sg_gen._get_rule_protocol(rule)
 
         self.assertEqual(expected, actual)

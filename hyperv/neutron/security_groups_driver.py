@@ -320,6 +320,10 @@ class SecurityGroupRuleGeneratorR2(SecurityGroupRuleGenerator):
 
     def _get_rule_protocol(self, rule):
         protocol = self._get_rule_prop_or_default(rule, 'protocol')
+        if protocol == 'icmp' and rule.get('ethertype') == 'IPv6':
+            # If protocol is ICMP and ethertype is IPv6 the protocol has
+            # to be ICMPv6.
+            return ACL_PROP_MAP['protocol']['ipv6-icmp']
         if protocol in six.iterkeys(ACL_PROP_MAP['protocol']):
             return ACL_PROP_MAP['protocol'][protocol]
 
