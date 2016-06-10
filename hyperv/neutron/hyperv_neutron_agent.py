@@ -16,19 +16,18 @@
 
 import collections
 from concurrent import futures
-import inspect
 import re
 import threading
 import time
 
 from os_win import exceptions
 from os_win import utilsfactory
-from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_log import log as logging
 import six
 
 from hyperv.common.i18n import _, _LE, _LW, _LI  # noqa
+from hyperv.neutron import _common_utils as c_util
 from hyperv.neutron import constants
 from hyperv.neutron import exception
 from hyperv.neutron import nvgre_ops
@@ -37,22 +36,7 @@ CONF = cfg.CONF
 CONF.import_group('NVGRE', 'hyperv.neutron.config')
 LOG = logging.getLogger(__name__)
 
-synchronized = lockutils.synchronized_with_prefix('n-hv-agent-')
-
-
-def _port_synchronized(f):
-    # This decorator synchronizes operations targeting the same port.
-    # The decorated method is expected to accept the port_id argument.
-    def wrapper(*args, **kwargs):
-        call_args = inspect.getcallargs(f, *args, **kwargs)
-        port_id = call_args['port_id']
-        lock_name = 'port-lock-%s' % port_id
-
-        @synchronized(lock_name)
-        def inner():
-            return f(*args, **kwargs)
-        return inner()
-    return wrapper
+_port_synchronized = c_util.get_port_synchronized_decorator('n-hv-agent-')
 
 
 class HyperVNeutronAgentMixin(object):

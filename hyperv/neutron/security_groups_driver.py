@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from eventlet import greenthread
 import netaddr
 from neutron.agent import firewall
 from os_win import exceptions
@@ -23,6 +22,7 @@ from oslo_log import log as logging
 import six
 
 from hyperv.common.i18n import _LE, _LI  # noqa
+from hyperv.neutron import _common_utils as c_utils
 import threading
 
 LOG = logging.getLogger(__name__)
@@ -47,6 +47,9 @@ ACL_PROP_MAP = {
     'default': "ANY",
     'address_default': {'IPv4': '0.0.0.0/0', 'IPv6': '::/0'}
 }
+
+
+_ports_synchronized = c_utils.get_port_synchronized_decorator('n-hv-driver-')
 
 
 class HyperVSecurityGroupsDriverMixin(object):
@@ -149,6 +152,7 @@ class HyperVSecurityGroupsDriverMixin(object):
         self._security_ports[port['device']] = port
         self._sec_group_rules[port['id']] = newrules[port['id']]
 
+    @_ports_synchronized
     def _create_port_rules(self, port_id, rules):
         sg_rules = self._sg_gen.create_security_group_rules(rules)
         old_sg_rules = self._sec_group_rules[port_id]
@@ -157,6 +161,7 @@ class HyperVSecurityGroupsDriverMixin(object):
         self._add_sg_port_rules(port_id, list(set(add)))
         self._remove_sg_port_rules(port_id, list(set(rm)))
 
+    @_ports_synchronized
     def _remove_port_rules(self, port_id, rules):
         sg_rules = self._sg_gen.create_security_group_rules(rules)
         self._remove_sg_port_rules(port_id, list(set(sg_rules)))
@@ -165,8 +170,6 @@ class HyperVSecurityGroupsDriverMixin(object):
         if not sg_rules:
             return
         old_sg_rules = self._sec_group_rules[port_id]
-        # yielding to other threads that must run (like state reporting)
-        greenthread.sleep()
         try:
             self._utils.create_security_rules(port_id, sg_rules)
             old_sg_rules.extend(sg_rules)

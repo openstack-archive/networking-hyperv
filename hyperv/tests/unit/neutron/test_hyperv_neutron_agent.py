@@ -55,22 +55,6 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent._nvgre_ops = mock.MagicMock()
         self.agent._workers = mock.MagicMock()
 
-    @mock.patch.object(hyperv_neutron_agent, 'synchronized')
-    def test_port_synchronized(self, mock_synchronized):
-        fake_method_side_effect = mock.Mock()
-
-        @hyperv_neutron_agent._port_synchronized
-        def fake_method(fake_arg, port_id):
-            fake_method_side_effect(fake_arg, port_id)
-
-        mock_synchronized.return_value = lambda x: x
-        expected_lock_name = 'port-lock-%s' % mock.sentinel.port_id
-
-        fake_method(fake_arg=mock.sentinel.arg, port_id=mock.sentinel.port_id)
-        mock_synchronized.assert_called_once_with(expected_lock_name)
-        fake_method_side_effect.assert_called_once_with(
-            mock.sentinel.arg, mock.sentinel.port_id)
-
     def test_load_physical_network_mappings(self):
         test_mappings = ['fakenetwork1:fake_vswitch',
                          'fakenetwork2:fake_vswitch_2', '*:fake_vswitch_3']
