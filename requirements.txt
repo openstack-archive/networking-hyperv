@@ -7,10 +7,10 @@ Babel>=2.3.4 # BSD
 eventlet!=0.18.3,>=0.18.2 # MIT
 
 os-win>=0.2.3 # Apache-2.0
-oslo.config>=3.9.0 # Apache-2.0
+oslo.config>=3.10.0 # Apache-2.0
 oslo.i18n>=2.1.0 # Apache-2.0
 oslo.log>=1.14.0 # Apache-2.0
 oslo.serialization>=1.10.0 # Apache-2.0
-oslo.utils>=3.5.0 # Apache-2.0
+oslo.utils>=3.11.0 # Apache-2.0
 
 python-neutronclient>=4.2.0 # Apache-2.0
