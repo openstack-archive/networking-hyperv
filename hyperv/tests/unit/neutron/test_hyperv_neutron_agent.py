@@ -443,7 +443,7 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self._check_treat_vif_port_state_up()
 
         sg_agent = self.agent.sec_groups_agent
-        sg_agent.prepare_devices_filter.assert_called_once_with(
+        sg_agent.refresh_firewall.assert_called_once_with(
             [mock.sentinel.port_id])
 
     def test_treat_vif_port_sg_disabled(self):

@@ -344,7 +344,7 @@ networking-plugin-hyperv_agent.html
             # check if security groups is enabled.
             # if not, teardown the security group rules
             if self.enable_security_groups:
-                self.sec_groups_agent.prepare_devices_filter([port_id])
+                self.sec_groups_agent.refresh_firewall([port_id])
             else:
                 self._utils.remove_all_security_rules(port_id)
         else:
