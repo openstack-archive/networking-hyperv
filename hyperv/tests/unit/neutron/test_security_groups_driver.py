@@ -89,7 +89,7 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         # Test without remote_group_id
         rule_list = self._driver._select_sg_rules_for_port(mock_port,
                                                            'ingress')
-        self.assertEqual(self._FAKE_SG_ID, rule_list[0]['security_group_id'])
+        self.assertNotIn('security_group_id', rule_list[0])
 
         # Test with remote_group_id
         fake_sg_template['remote_group_id'] = self._FAKE_SG_ID
@@ -97,8 +97,9 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
                                                       [self._FAKE_MEMBER_IP]}
         rule_list = self._driver._select_sg_rules_for_port(mock_port,
                                                            'ingress')
-        self.assertEqual(self._FAKE_SG_ID, rule_list[0]['security_group_id'])
         self.assertEqual('10.0.0.1/32', rule_list[0]['source_ip_prefix'])
+        self.assertNotIn('security_group_id', rule_list[0])
+        self.assertNotIn('remote_group_id', rule_list[0])
 
         # Test for fixed 'ip' existing in 'sg_members'
         self._driver._sg_members[self._FAKE_SG_ID][self._FAKE_ETHERTYPE] = [
@@ -218,6 +219,7 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         self._driver.update_port_filter(new_mock_port)
 
         self.assertNotIn(new_mock_port['device'], self._driver._security_ports)
+        mock_method.assert_called_once_with(new_mock_port)
 
     def test_remove_port_filter(self):
         mock_port = self._get_port()
