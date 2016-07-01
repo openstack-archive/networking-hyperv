@@ -116,6 +116,7 @@ networking-plugin-hyperv_agent.html
                 LOG.debug('Invalid physical network mapping: %s', mapping)
             else:
                 pattern = re.escape(parts[0].strip()).replace('\\*', '.*')
+                pattern = pattern + '$'
                 vswitch = parts[1].strip()
                 self._physical_network_mappings[pattern] = vswitch
 
