@@ -413,6 +413,7 @@ networking-plugin-hyperv_agent.html
                 resync = True
                 continue
             self._port_unbound(device, vnic_deleted=True)
+            self.sec_groups_agent.remove_devices_filter([device])
         return resync
 
     def _process_network_ports(self, port_info):
