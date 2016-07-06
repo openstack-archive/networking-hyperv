@@ -80,7 +80,7 @@ class HyperVSecurityGroupsDriverMixin(object):
                 remote_group_id = rule.get('remote_group_id')
                 if not remote_group_id:
                     grp_rule = rule.copy()
-                    grp_rule['security_group_id'] = sg_id
+                    grp_rule.pop('security_group_id', None)
                     port_rules.append(grp_rule)
                     continue
                 ethertype = rule['ethertype']
@@ -91,7 +91,12 @@ class HyperVSecurityGroupsDriverMixin(object):
                     direction_ip_prefix = DIRECTION_IP_PREFIX[direction]
                     ip_rule[direction_ip_prefix] = str(
                         netaddr.IPNetwork(ip).cidr)
-                    ip_rule['security_group_id'] = sg_id
+                    # NOTE(claudiub): avoid returning fields that are not
+                    # directly used in setting the security group rules
+                    # properly (remote_group_id, security_group_id), as they
+                    # only make testing for rule's identity harder.
+                    ip_rule.pop('security_group_id', None)
+                    ip_rule.pop('remote_group_id', None)
                     port_rules.append(ip_rule)
         return port_rules
 
@@ -199,8 +204,9 @@ class HyperVSecurityGroupsDriverMixin(object):
         LOG.info(_LI('Updating port rules.'))
 
         if port['device'] not in self._security_ports:
-            LOG.info(_LI("Device %(port)s not yet added."),
+            LOG.info(_LI("Device %(port)s not yet added. Adding."),
                      {'port': port['id']})
+            self.prepare_port_filter(port)
             return
 
         old_port = self._security_ports[port['device']]
