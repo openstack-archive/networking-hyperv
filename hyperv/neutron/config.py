@@ -29,13 +29,13 @@ HYPERV_AGENT_OPTS = [
         'local_network_vswitch',
         default='private',
         help=_('Private vswitch name used for local networks')),
-    cfg.IntOpt('polling_interval', default=2,
+    cfg.IntOpt('polling_interval', default=2, min=1,
                help=_("The number of seconds the agent will wait between "
                       "polling for local device changes.")),
-    cfg.IntOpt('worker_count', default=10,
+    cfg.IntOpt('worker_count', default=10, min=1,
                help=_("The number of worker threads allowed to run in "
                       "parallel to process port binding.")),
-    cfg.IntOpt('worker_retry', default=3,
+    cfg.IntOpt('worker_retry', default=3, min=0,
                help=_("The number of times worker process will retry "
                       "port binding.")),
     cfg.BoolOpt('enable_metrics_collection',
@@ -46,15 +46,15 @@ HYPERV_AGENT_OPTS = [
                        'Ceilometer. Requires Hyper-V / Windows Server 2012 '
                        'and above')),
     cfg.IntOpt('metrics_max_retries',
-               default=100,
+               default=100, min=0,
                help=_('Specifies the maximum number of retries to enable '
                       'Hyper-V\'s port metrics collection. The agent will try '
                       'to enable the feature once every polling_interval '
                       'period for at most metrics_max_retries or until it '
                       'succeedes.')),
-    cfg.StrOpt('neutron_metadata_address',
-               default='169.254.169.254',
-               help=_('Specifies the address which will serve the metadata for'
+    cfg.IPOpt('neutron_metadata_address',
+              default='169.254.169.254',
+              help=_('Specifies the address which will serve the metadata for'
                       ' the instance.')),
 ]
 
@@ -64,13 +64,13 @@ NVGRE_OPTS = [
                 help=_('Enables Hyper-V NVGRE. '
                        'Requires Windows Server 2012 or above.')),
     cfg.IntOpt('provider_vlan_id',
-               default=0,
+               default=0, min=0, max=4096,
                help=_('Specifies the VLAN ID of the physical network, required'
                       ' for setting the NVGRE Provider Address.')),
-    cfg.StrOpt('provider_tunnel_ip',
-               default=None,
-               help=_('Specifies the tunnel IP which will be used and '
-                      'reported by this host for NVGRE networks.')),
+    cfg.IPOpt('provider_tunnel_ip',
+              default=None,
+              help=_('Specifies the tunnel IP which will be used and '
+                     'reported by this host for NVGRE networks.')),
 ]
 
 
