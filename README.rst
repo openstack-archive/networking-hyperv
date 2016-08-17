@@ -2,11 +2,14 @@
 networking-hyperv
 =================
 
-This project tracks the work to integrate the Hyper-V networking with Neutron. This project contains the Hyper-V Neutron Agent Mixin, Security Groups Driver, ML2 Mechanism Driver and the utils modules they use in order to properly bind neutron ports on a Hyper-V host.
+This project tracks the work to integrate the Hyper-V networking with Neutron.
+This project contains the Hyper-V Neutron Agent, Security Groups Driver, and
+ML2 Mechanism Driver, which are used to properly bind neutron ports on a
+Hyper-V host.
 
 This project resulted from the neutron core vendor decomposition.
 
-Supports Python 2.7 and Python 3.3.
+Supports Python 2.7, Python 3.3, Python 3.4, and Python 3.5.
 
 * Free software: Apache license
 * Documentation: http://docs.openstack.org/developer/networking-hyperv
@@ -17,27 +20,32 @@ Supports Python 2.7 and Python 3.3.
 How to Install
 --------------
 
-Run the following command to install the agent in the system:
+Run the following command to install the agent on the system:
 
 ::
 
     C:\networking-hyperv> python setup.py install
 
-To properly use the agent, you will have to set the core_plugin in
-``neutron.conf`` to:
+To use the ``neutron-hyperv-agent``, the Neutron Controller will have to be
+properly configured. For this, the config option ``core_plugin`` in the
+``/etc/neutron/neutron.conf`` file must be set as follows:
 
 ::
 
     core_plugin = neutron.plugins.ml2.plugin.Ml2Plugin
 
-Additionally, you will have to add Hyper-V as a mechanism in ``ml2_conf.ini``:
+Additionally, ``hyperv`` will have to be added as a mechanism driver in the
+``/etc/neutron/plugins/ml2/ml2_conf.ini`` configuration file:
 
 ::
 
     mechanism_drivers = openvswitch,hyperv
 
-Finally, make sure the tenant_network_types field contains network types
-supported by Hyper-V: local, flat, vlan.
+In order for these changes to take effect, the ``neutron-server`` service will
+have to be restarted.
+
+Finally, make sure the ``tenant_network_types`` field contains network types
+supported by Hyper-V: local, flat, vlan, gre.
 
 
 Tests
@@ -48,6 +56,7 @@ tests.
 
 ::
 
+    C:\networking-hyperv> pip install -r requirements.txt
     C:\networking-hyperv> pip install -r test-requirements.txt
 
 You can run the unit tests with the following command.
@@ -57,19 +66,26 @@ You can run the unit tests with the following command.
     C:\networking-hyperv> nosetests hyperv\tests
 
 
-HACKING
--------
+How to contribute
+-----------------
 
-To contribute to this repo, please go through the following steps.
+To contribute to this project, please go through the following steps.
 
-1. Keep your working tree updated
-2. Make modifications on your working tree
-3. Run tests
-4. If the tests pass, create a pull request on our github repo.
-5. Wait for the pull request to be reviewed.
+1. Clone the project and keep your working tree updated.
+2. Make modifications on your working tree.
+3. Run unit tests.
+4. If the tests pass, commit your code.
+5. Submit your code via ``git review``.
+6. Check that Jenkins and the Microsoft Hyper-V CI pass on your patch.
+7. If there are issues with your commit, ammend, and submit it again via
+   ``git review``.
+8. Wait for the patch to be reviewed.
 
 
 Features
 --------
 
-* TODO
+* Supports Flat, VLAN, GRE / NVGRE network types.
+* Supports Neutron Security Groups.
+* Contains ML2 Mechanism Driver.
+* Parallel port processing.
