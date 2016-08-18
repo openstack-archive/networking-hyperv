@@ -51,6 +51,28 @@ class TestHyperVNvgreOps(base.BaseTestCase):
         self.ops._n_client = mock.MagicMock()
         self.ops._db = mock.MagicMock()
 
+    @mock.patch.object(nvgre_ops.hyperv_agent_notifier, 'AgentNotifierApi')
+    def test_init_notifier(self, mock_notifier):
+        self.ops.init_notifier(mock.sentinel.context, mock.sentinel.rpc_client)
+        mock_notifier.assert_called_once_with(
+            constants.AGENT_TOPIC,
+            mock.sentinel.rpc_client)
+        self.assertEqual(mock_notifier.return_value, self.ops._notifier)
+        self.assertEqual(mock.sentinel.context, self.ops.context)
+
+    def test_init_nvgre(self):
+        self.ops._nvgre_utils.get_network_iface_ip.return_value = (
+            mock.sentinel.ip_addr, mock.sentinel.length)
+
+        self.ops._init_nvgre([mock.sentinel.physical_network])
+
+        self.assertEqual(self.ops._vswitch_ips[mock.sentinel.physical_network],
+                         mock.sentinel.ip_addr)
+        self.ops._nvgre_utils.create_provider_route.assert_called_once_with(
+            mock.sentinel.physical_network)
+        self.ops._nvgre_utils.create_provider_address.assert_called_once_with(
+            mock.sentinel.physical_network, CONF.NVGRE.provider_vlan_id)
+
     def test_refresh_tunneling_agents(self):
         self.ops._n_client.get_tunneling_agents.return_value = {
             mock.sentinel.host: mock.sentinel.host_ip
@@ -75,6 +97,25 @@ class TestHyperVNvgreOps(base.BaseTestCase):
             mock.sentinel.customer_addr,
             mock.sentinel.mac_addr,
             mock.sentinel.vsid)
+
+    def test_tunnel_update_nvgre(self):
+        self.ops.tunnel_update(
+            mock.sentinel.context,
+            mock.sentinel.tunnel_ip,
+            tunnel_type=constants.TYPE_NVGRE)
+
+        self.ops._notifier.tunnel_update.assert_called_once_with(
+            mock.sentinel.context,
+            CONF.NVGRE.provider_tunnel_ip,
+            constants.TYPE_NVGRE)
+
+    def test_tunnel_update(self):
+        self.ops.tunnel_update(
+            mock.sentinel.context,
+            mock.sentinel.tunnel_ip,
+            mock.sentinel.tunnel_type)
+
+        self.assertFalse(self.ops._notifier.tunnel_update.called)
 
     @mock.patch.object(nvgre_ops.HyperVNvgreOps, '_register_lookup_record')
     def test_lookup_update_no_details(self, mock_register_record):
@@ -221,3 +262,16 @@ class TestHyperVNvgreOps(base.BaseTestCase):
             #          expected_mac, mock.sentinel.vsid)
         ])
         self.assertIn(mock.sentinel.port_id, self.ops._nvgre_ports)
+
+    @mock.patch.object(nvgre_ops.HyperVNvgreOps, '_register_lookup_record')
+    def test_refresh_nvgre_records_exception(self, mock_register_record):
+        self.ops._tunneling_agents[mock.sentinel.host_id] = (
+            mock.sentinel.agent_ip)
+        self.ops._network_vsids[mock.sentinel.net_id] = (mock.sentinel.vsid)
+        port = mock.MagicMock()
+        self.ops._n_client.get_network_ports.return_value = [port]
+        mock_register_record.side_effect = TypeError
+
+        self.ops.refresh_nvgre_records()
+
+        self.assertNotIn(mock.sentinel.port_id, self.ops._nvgre_ports)

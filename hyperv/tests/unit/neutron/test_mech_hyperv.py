@@ -17,6 +17,8 @@
 Unit tests for the Hyper-V Mechanism Driver.
 """
 
+import mock
+
 from hyperv.neutron import constants
 from hyperv.neutron.ml2 import mech_hyperv
 from hyperv.tests import base
@@ -43,3 +45,26 @@ class TestHypervMechanismDriver(base.BaseTestCase):
         network_types = [constants.TYPE_LOCAL, constants.TYPE_FLAT,
                          constants.TYPE_VLAN, constants.TYPE_NVGRE]
         self.assertEqual(network_types, actual_net_types)
+
+    def test_get_mappings(self):
+        agent = {'configurations': {
+            'vswitch_mappings': [mock.sentinel.mapping]}}
+        mappings = self.mech_hyperv.get_mappings(agent)
+        self.assertEqual([mock.sentinel.mapping], mappings)
+
+    def test_physnet_in_mappings(self):
+        physnet = 'test_physnet'
+        match_mapping = '.*'
+        different_mapping = 'fake'
+
+        pattern_matched = self.mech_hyperv.physnet_in_mappings(
+            physnet, [match_mapping])
+        self.assertTrue(pattern_matched)
+
+        pattern_matched = self.mech_hyperv.physnet_in_mappings(
+            physnet, [different_mapping])
+        self.assertFalse(pattern_matched)
+
+        pattern_matched = self.mech_hyperv.physnet_in_mappings(
+            physnet, [different_mapping, match_mapping])
+        self.assertTrue(pattern_matched)

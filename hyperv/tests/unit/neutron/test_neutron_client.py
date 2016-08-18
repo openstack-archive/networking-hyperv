@@ -18,10 +18,13 @@ Unit tests for the neutron client.
 """
 
 import mock
+from oslo_config import cfg
 
 from hyperv.neutron import constants
 from hyperv.neutron import neutron_client
 from hyperv.tests import base
+
+CONF = cfg.CONF
 
 
 class TestNeutronClient(base.BaseTestCase):
@@ -34,6 +37,22 @@ class TestNeutronClient(base.BaseTestCase):
         super(TestNeutronClient, self).setUp()
         self._neutron = neutron_client.NeutronAPIClient()
         self._neutron._client = mock.MagicMock()
+
+    @mock.patch.object(neutron_client.clientv20, "Client")
+    def test_init_client(self, mock_client):
+        self._neutron._init_client()
+
+        self.assertEqual(mock_client.return_value, self._neutron._client)
+        mock_client.assert_called_once_with(
+            endpoint_url=CONF.neutron.url,
+            timeout=CONF.neutron.url_timeout,
+            insecure=True,
+            ca_cert=None,
+            username=CONF.neutron.admin_username,
+            tenant_name=CONF.neutron.admin_tenant_name,
+            password=CONF.neutron.admin_password,
+            auth_url=CONF.neutron.admin_auth_url,
+            auth_strategy=CONF.neutron.auth_strategy)
 
     def test_get_network_subnets(self):
         self._neutron._client.show_network.return_value = {
