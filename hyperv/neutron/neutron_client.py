@@ -23,30 +23,6 @@ from hyperv.neutron import constants
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
-neutron_opts = [
-    cfg.StrOpt('url',
-               default='http://127.0.0.1:9696',
-               help='URL for connecting to neutron'),
-    cfg.IntOpt('url_timeout',
-               default=30,
-               help='timeout value for connecting to neutron in seconds'),
-    cfg.StrOpt('admin_username',
-               help='username for connecting to neutron in admin context'),
-    cfg.StrOpt('admin_password',
-               help='password for connecting to neutron in admin context',
-               secret=True),
-    cfg.StrOpt('admin_tenant_name',
-               help='tenant name for connecting to neutron in admin context'),
-    cfg.StrOpt('admin_auth_url',
-               default='http://localhost:5000/v2.0',
-               help='auth url for connecting to neutron in admin context'),
-    cfg.StrOpt('auth_strategy',
-               default='keystone',
-               help='auth strategy for connecting to neutron in admin context')
-]
-
-CONF.register_opts(neutron_opts, 'neutron')
-
 
 class NeutronAPIClient(object):
 

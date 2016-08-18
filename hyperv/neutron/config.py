@@ -73,6 +73,28 @@ NVGRE_OPTS = [
                      'reported by this host for NVGRE networks.')),
 ]
 
+NEUTRON_OPTS = [
+    cfg.StrOpt('url',
+               default='http://127.0.0.1:9696',
+               help='URL for connecting to neutron'),
+    cfg.IntOpt('url_timeout',
+               default=30, min=1,
+               help='timeout value for connecting to neutron in seconds'),
+    cfg.StrOpt('admin_username',
+               help='username for connecting to neutron in admin context'),
+    cfg.StrOpt('admin_password',
+               help='password for connecting to neutron in admin context',
+               secret=True),
+    cfg.StrOpt('admin_tenant_name',
+               help='tenant name for connecting to neutron in admin context'),
+    cfg.StrOpt('admin_auth_url',
+               default='http://localhost:5000/v2.0',
+               help='auth url for connecting to neutron in admin context'),
+    cfg.StrOpt('auth_strategy',
+               default='keystone',
+               help='auth strategy for connecting to neutron in admin context')
+]
 
 cfg.CONF.register_opts(HYPERV_AGENT_OPTS, "AGENT")
 cfg.CONF.register_opts(NVGRE_OPTS, "NVGRE")
+cfg.CONF.register_opts(NEUTRON_OPTS, 'neutron')
