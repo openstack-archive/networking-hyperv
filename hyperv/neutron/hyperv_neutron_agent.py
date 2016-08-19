@@ -155,10 +155,8 @@ networking-plugin-hyperv_agent.html
         else:
             LOG.debug("Network %s not defined on agent.", network_id)
 
-    @_port_synchronized
     def port_delete(self, context, port_id=None):
-        LOG.debug("port_delete received")
-        self._port_unbound(port_id)
+        pass
 
     def port_update(self, context, port=None, network_type=None,
                     segmentation_id=None, physical_network=None):
