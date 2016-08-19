@@ -1,16 +1,25 @@
 Hyper-V Neutron Agent and ML2 Mechanism Driver for ML2 Plugin
 =============================================================
 
-In order to properly use the Hyper-V Neutron Agent, neutron will have to use
-the Ml2Plugin. This can be done by setting the ``core_plugin`` field in
-``neutron.conf`` to:
+This mechanism driver is used by ``neutron-server`` in order to bind neutron
+ports to Hyper-V hosts. In order to use it, ``neutron-server`` must use the
+Ml2Plugin as a ``core_plugin``. The service's configration file
+(``/etc/neutron/neutron.conf``), must contain this following line:
 
 ::
 
     core_plugin = neutron.plugins.ml2.plugin.Ml2Plugin
 
+In order to use this ML2 Mechanism Driver, ``networking-hyperv`` must be
+installed on the Neutron Controller:
+
+::
+
+    pip install networking-hyperv
+
 Additionally, the ML2 Plugin must be configured to use the Hyper-V Mechanism
-Driver, by adding it to the ``mechanism_drivers`` field in ``ml2_conf.ini``:
+Driver, by adding it to the ``mechanism_drivers`` field in
+``/etc/neutron/plugins/ml2/ml2_conf.ini``:
 
 ::
 
@@ -18,5 +27,9 @@ Driver, by adding it to the ``mechanism_drivers`` field in ``ml2_conf.ini``:
     mechanism_drivers = openvswitch,hyperv
     # any other mechanism_drivers can be added to the list.
 
+After editing a configuration file, the ``neutron-server`` service must be
+restarted, in order for the changes to take effect.
+
 Currently, the mechanism driver supports the following network types: local,
-flat, VLAN.
+flat, vlan, gre. Neutron ports on networks having other types than the ones
+mentioned will not be bound on Hyper-V hosts.
