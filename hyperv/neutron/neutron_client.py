@@ -29,23 +29,18 @@ class NeutronAPIClient(object):
     def __init__(self):
         self._init_client()
 
-    def _init_client(self, token=None):
+    def _init_client(self):
         params = {
             'endpoint_url': CONF.neutron.url,
             'timeout': CONF.neutron.url_timeout,
             'insecure': True,
             'ca_cert': None,
+            'username': CONF.neutron.admin_username,
+            'tenant_name': CONF.neutron.admin_tenant_name,
+            'password': CONF.neutron.admin_password,
+            'auth_url': CONF.neutron.admin_auth_url,
+            'auth_strategy': CONF.neutron.auth_strategy
         }
-
-        if token:
-            params['token'] = token
-            params['auth_strategy'] = None
-        else:
-            params['username'] = CONF.neutron.admin_username
-            params['tenant_name'] = CONF.neutron.admin_tenant_name
-            params['password'] = CONF.neutron.admin_password
-            params['auth_url'] = CONF.neutron.admin_auth_url
-            params['auth_strategy'] = CONF.neutron.auth_strategy
 
         self._client = clientv20.Client(**params)
 
