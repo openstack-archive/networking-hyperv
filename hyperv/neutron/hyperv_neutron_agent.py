@@ -307,16 +307,6 @@ networking-plugin-hyperv_agent.html
                                 "metrics."), port_id)
                 del self._port_metric_retries[port_id]
 
-    def _update_ports(self, registered_ports):
-        ports = self._utils.get_vnic_ids()
-        if ports == registered_ports:
-            return
-        added = ports - registered_ports
-        removed = registered_ports - ports
-        return {'current': ports,
-                'added': added,
-                'removed': removed}
-
     @_port_synchronized
     def _treat_vif_port(self, port_id, network_id, network_type,
                         physical_network, segmentation_id,
