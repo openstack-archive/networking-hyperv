@@ -24,11 +24,14 @@ import time
 import mock
 from os_win import exceptions
 from os_win import utilsfactory
+from oslo_config import cfg
 
 from hyperv.neutron import constants
 from hyperv.neutron import exception
 from hyperv.neutron import hyperv_neutron_agent
 from hyperv.tests import base
+
+CONF = cfg.CONF
 
 
 class TestHyperVNeutronAgent(base.BaseTestCase):
@@ -57,7 +60,8 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
     def test_load_physical_network_mappings(self):
         test_mappings = ['fakenetwork1:fake_vswitch',
-                         'fakenetwork2:fake_vswitch_2', '*:fake_vswitch_3']
+                         'fakenetwork2:fake_vswitch_2', '*:fake_vswitch_3',
+                         'bad_mapping']
         expected = [('fakenetwork1$', 'fake_vswitch'),
                     ('fakenetwork2$', 'fake_vswitch_2'),
                     ('.*$', 'fake_vswitch_3')]
@@ -162,6 +166,22 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.assertIsNone(port_map)
 
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_reclaim_local_network')
+    def test_network_delete(self, mock_reclaim_local_network):
+        self.agent._network_vswitch_map[mock.sentinel.net_id] = (
+            mock.sentinel.vswitch)
+
+        self.agent.network_delete(mock.sentinel.context, mock.sentinel.net_id)
+        mock_reclaim_local_network.assert_called_once_with(
+            mock.sentinel.net_id)
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_reclaim_local_network')
+    def test_network_delete_not_defined(self, mock_reclaim_local_network):
+        self.agent.network_delete(mock.sentinel.context, mock.sentinel.net_id)
+        self.assertFalse(mock_reclaim_local_network.called)
+
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        '_treat_vif_port')
     def test_port_update_not_found(self, mock_treat_vif_port):
         self.agent._utils.vnic_port_exists.return_value = False
@@ -187,6 +207,19 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
             mock.sentinel.port_id, mock.sentinel.network_id,
             mock.sentinel.network_type, mock.sentinel.physical_network,
             mock.sentinel.segmentation_id, mock.sentinel.admin_state_up)
+
+    def test_tunnel_update(self):
+        self.agent.tunnel_update(mock.sentinel.context,
+                                 tunnel_ip=mock.sentinel.tunnel_ip,
+                                 tunnel_type=mock.sentinel.tunnel_type)
+        self.agent._nvgre_ops.tunnel_update.assert_called_once_with(
+            mock.sentinel.context, mock.sentinel.tunnel_ip,
+            mock.sentinel.tunnel_type)
+
+    def test_tunnel_update_provider_ip(self):
+        self.agent.tunnel_update(mock.sentinel.context,
+                                 tunnel_ip=CONF.NVGRE.provider_tunnel_ip)
+        self.assertFalse(self.agent._nvgre_ops.tunnel_update.called)
 
     def test_lookup_update(self):
         kwargs = {'lookup_ip': mock.sentinel.lookup_ip,
@@ -281,6 +314,13 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         mock_get_vswitch_name.assert_called_once_with(
             constants.TYPE_LOCAL,
             mock.sentinel.FAKE_PHYSICAL_NETWORK)
+
+    def test_reclaim_local_network(self):
+        self.agent._network_vswitch_map[mock.sentinel.net_id] = (
+            mock.sentinel.vswitch)
+
+        self.agent._reclaim_local_network(mock.sentinel.net_id)
+        self.assertNotIn(mock.sentinel.net_id, self.agent._network_vswitch_map)
 
     def test_port_bound_enable_metrics(self):
         self.agent.enable_metrics_collection = True
@@ -568,3 +608,27 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         # allow the threads to finish. one second is enough for a noop call.
         time.sleep(1)
         mock_fn.assert_has_calls([mock.call(mock.sentinel.parameter)] * 8)
+
+    @mock.patch('time.sleep')
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_port_enable_control_metrics')
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_treat_devices_added')
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_create_event_listeners')
+    def test_daemon_loop(self, mock_create_listeners, mock_treat_dev_added,
+                         mock_port_enable_metrics, mock_sleep):
+        self.agent._nvgre_enabled = True
+        mock_port_enable_metrics.side_effect = KeyError
+        mock_sleep.side_effect = KeyboardInterrupt
+
+        self.assertRaises(KeyboardInterrupt, self.agent.daemon_loop)
+
+        self.assertEqual(self.agent._utils.get_vnic_ids.return_value,
+                         self.agent._added_ports)
+        self.assertEqual(set(), self.agent._removed_ports)
+        mock_create_listeners.assert_called_once_with()
+        mock_treat_dev_added.assert_called_once_with()
+        self.agent._nvgre_ops.refresh_nvgre_records.assert_called_once_with()
+        mock_port_enable_metrics.assert_called_with()
+        self.agent._utils.update_cache.assert_called_once_with()
