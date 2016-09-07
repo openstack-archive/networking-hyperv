@@ -20,12 +20,9 @@ Unit tests for the Hyper-V Security Groups Driver.
 import mock
 from os_win import exceptions
 from os_win import utilsfactory
-from oslo_config import cfg
 
 from hyperv.neutron import security_groups_driver as sg_driver
 from hyperv.tests import base
-
-CONF = cfg.CONF
 
 
 class SecurityGroupRuleTestHelper(base.BaseTestCase):
