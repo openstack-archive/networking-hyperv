@@ -18,9 +18,6 @@
 Unit tests for Windows Hyper-V virtual switch neutron driver
 """
 
-from concurrent import futures
-import time
-
 import mock
 from os_win import exceptions
 from os_win import utilsfactory
@@ -56,7 +53,6 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent.notifier = mock.Mock()
         self.agent._utils = mock.MagicMock()
         self.agent._nvgre_ops = mock.MagicMock()
-        self.agent._workers = mock.MagicMock()
 
     def test_load_physical_network_mappings(self):
         test_mappings = ['fakenetwork1:fake_vswitch',
@@ -520,7 +516,8 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
         self.assertIn(mock.sentinel.port_id, self.agent._added_ports)
 
-    def test_treat_devices_added_updates_known_port(self):
+    @mock.patch.object(hyperv_neutron_agent.eventlet, 'spawn_n')
+    def test_treat_devices_added_updates_known_port(self, mock_spawn):
         self.agent._added_ports = set([mock.sentinel.device])
         details = self._get_fake_port_details()
         attrs = {'get_devices_details_list.return_value': [details]}
@@ -528,7 +525,7 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
         self.agent._treat_devices_added()
 
-        self.agent._workers.submit.assert_called_once_with(
+        mock_spawn.assert_called_once_with(
             self.agent._process_added_port, details)
         self.assertNotIn(mock.sentinel.device, self.agent._added_ports)
 
@@ -540,7 +537,6 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
         self.agent._treat_devices_added()
 
-        self.assertFalse(self.agent._workers.submit.called)
         self.assertNotIn(mock.sentinel.port_id, self.agent._added_ports)
 
     def test_treat_devices_removed_exception(self):
@@ -583,31 +579,19 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent._process_removed_port_event(mock.sentinel.port_id)
         self.assertIn(mock.sentinel.port_id, self.agent._removed_ports)
 
-    @mock.patch.object(hyperv_neutron_agent.threading, 'Thread')
-    def test_create_event_listeners(self, mock_Thread):
+    @mock.patch.object(hyperv_neutron_agent.eventlet, 'spawn_n')
+    def test_create_event_listeners(self, mock_spawn):
         self.agent._create_event_listeners()
 
         self.agent._utils.get_vnic_event_listener.assert_has_calls([
             mock.call(self.agent._utils.EVENT_TYPE_CREATE),
             mock.call(self.agent._utils.EVENT_TYPE_DELETE)])
         target = self.agent._utils.get_vnic_event_listener.return_value
-        calls = [mock.call(target=target,
-                           args=(self.agent._process_added_port_event, )),
-                 mock.call(target=target,
-                           args=(self.agent._process_removed_port_event, ))]
-        mock_Thread.assert_has_calls(calls, any_order=True)
-        self.assertEqual(2, mock_Thread.return_value.start.call_count)
-
-    def test_thread_pool_execution(self):
-        pool = futures.ThreadPoolExecutor(max_workers=3)
-        mock_fn = mock.MagicMock()
-
-        for i in range(8):
-            pool.submit(mock_fn, mock.sentinel.parameter)
-
-        # allow the threads to finish. one second is enough for a noop call.
-        time.sleep(1)
-        mock_fn.assert_has_calls([mock.call(mock.sentinel.parameter)] * 8)
+        calls = [mock.call(target,
+                           self.agent._process_added_port_event),
+                 mock.call(target,
+                           self.agent._process_removed_port_event)]
+        mock_spawn.assert_has_calls(calls, any_order=True)
 
     @mock.patch('time.sleep')
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
