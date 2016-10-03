@@ -15,11 +15,11 @@
 #    under the License.
 
 import collections
-from concurrent import futures
 import re
-import threading
 import time
 
+import eventlet
+from eventlet import tpool
 from os_win import exceptions
 from os_win import utilsfactory
 from oslo_config import cfg
@@ -90,9 +90,10 @@ networking-plugin-hyperv_agent.html
         self.enable_security_groups = security_conf.get(
             'enable_security_group', False)
 
+        tpool.set_num_threads(self._worker_count)
+
         self._load_physical_network_mappings(self._phys_net_map)
         self._init_nvgre()
-        self._workers = futures.ThreadPoolExecutor(self._worker_count)
 
     def _load_physical_network_mappings(self, phys_net_vswitch_mappings):
         self._physical_network_mappings = collections.OrderedDict()
@@ -369,7 +370,7 @@ networking-plugin-hyperv_agent.html
                              "%(device_details)s"),
                          {'device': device, 'device_details': device_details})
 
-                self._workers.submit(self._process_added_port, device_details)
+                eventlet.spawn_n(self._process_added_port, device_details)
 
             # remove the port from added ports set, so it doesn't get
             # reprocessed.
@@ -410,8 +411,7 @@ networking-plugin-hyperv_agent.html
 
         for event_type, callback in event_callback_pairs:
             listener = self._utils.get_vnic_event_listener(event_type)
-            thread = threading.Thread(target=listener, args=(callback,))
-            thread.start()
+            eventlet.spawn_n(listener, callback)
 
     def daemon_loop(self):
         self._added_ports = self._utils.get_vnic_ids()
