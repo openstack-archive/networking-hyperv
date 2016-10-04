@@ -22,9 +22,11 @@ import eventlet
 from eventlet import tpool
 from os_win import exceptions
 from os_win import utilsfactory
+from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_log import log as logging
 import six
+import threading
 
 from hyperv.common.i18n import _, _LE, _LW, _LI  # noqa
 from hyperv.neutron import _common_utils as c_util
@@ -37,6 +39,7 @@ CONF.import_group('NVGRE', 'hyperv.neutron.config')
 LOG = logging.getLogger(__name__)
 
 _port_synchronized = c_util.get_port_synchronized_decorator('n-hv-agent-')
+synchronized = lockutils.synchronized_with_prefix('n-hv-agent-')
 
 
 class HyperVNeutronAgentMixin(object):
@@ -70,6 +73,7 @@ networking-plugin-hyperv_agent.html
         self._port_metric_retries = {}
 
         self._nvgre_enabled = False
+        self._cache_lock = threading.Lock()
 
         conf = conf or {}
         agent_conf = conf.get('AGENT', {})
@@ -337,11 +341,8 @@ networking-plugin-hyperv_agent.html
                                  device_details['segmentation_id'],
                                  device_details['admin_state_up'])
 
-            LOG.debug("Updating port %s status as UP.", port_id)
-            self.plugin_rpc.update_device_up(self.context,
-                                             device,
-                                             self.agent_id,
-                                             self._host)
+            LOG.debug("Updating cached port %s status as UP.", port_id)
+            self._update_port_status_cache(device, device_bound=True)
             LOG.info("Port %s processed.", port_id)
         except Exception:
             LOG.exception(_LE("Exception encountered while processing port "
@@ -378,16 +379,7 @@ networking-plugin-hyperv_agent.html
 
     def _treat_devices_removed(self):
         for device in list(self._removed_ports):
-            LOG.info(_LI("Removing port %s"), device)
-            try:
-                self.plugin_rpc.update_device_down(self.context,
-                                                   device,
-                                                   self.agent_id,
-                                                   self._host)
-            except Exception as e:
-                LOG.debug("Removing port failed for device %(device)s: %(e)s",
-                          dict(device=device, e=e))
-                continue
+            self._update_port_status_cache(device, device_bound=False)
 
             self._port_unbound(device, vnic_deleted=True)
             self.sec_groups_agent.remove_devices_filter([device])
@@ -413,15 +405,50 @@ networking-plugin-hyperv_agent.html
             listener = self._utils.get_vnic_event_listener(event_type)
             eventlet.spawn_n(listener, callback)
 
+    def _update_port_status_cache(self, device, device_bound=True):
+        with self._cache_lock:
+            if device_bound:
+                self._bound_ports.add(device)
+                self._unbound_ports.discard(device)
+            else:
+                self._bound_ports.discard(device)
+                self._unbound_ports.add(device)
+
+    @synchronized('n-plugin-notifier')
+    def _notify_plugin_on_port_updates(self):
+        if not (self._bound_ports or self._unbound_ports):
+            return
+
+        with self._cache_lock:
+            bound_ports = self._bound_ports.copy()
+            unbound_ports = self._unbound_ports.copy()
+
+        self.plugin_rpc.update_device_list(self.context,
+                                           list(bound_ports),
+                                           list(unbound_ports),
+                                           self.agent_id,
+                                           self._host)
+
+        with self._cache_lock:
+            self._bound_ports = self._bound_ports.difference(bound_ports)
+            self._unbound_ports = self._unbound_ports.difference(
+                unbound_ports)
+
     def daemon_loop(self):
+        # The following sets contain ports that are to be processed.
         self._added_ports = self._utils.get_vnic_ids()
         self._removed_ports = set()
+        # The following sets contain ports that have been processed.
+        self._bound_ports = set()
+        self._unbound_ports = set()
 
         self._create_event_listeners()
 
         while True:
             try:
                 start = time.time()
+
+                eventlet.spawn_n(self._notify_plugin_on_port_updates)
 
                 # notify plugin about port deltas
                 if self._added_ports:
