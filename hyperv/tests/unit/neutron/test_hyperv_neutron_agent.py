@@ -474,7 +474,10 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        '_treat_vif_port')
-    def test_process_added_port(self, mock_treat_vif_port):
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_update_port_status_cache')
+    def test_process_added_port(self, mock_update_port_cache,
+                                mock_treat_vif_port):
         self.agent._added_ports = set()
         details = self._get_fake_port_details()
 
@@ -484,9 +487,8 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
             mock.sentinel.port_id, mock.sentinel.network_id,
             mock.sentinel.network_type, mock.sentinel.physical_network,
             mock.sentinel.segmentation_id, mock.sentinel.admin_state_up)
-        self.agent.plugin_rpc.update_device_up.assert_called_once_with(
-            self.agent.context, mock.sentinel.device,
-            self.agent.agent_id, self.agent._host)
+        mock_update_port_cache.assert_called_once_with(mock.sentinel.device,
+                                                       device_bound=True)
         self.assertNotIn(mock.sentinel.device, self.agent._added_ports)
 
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
@@ -539,35 +541,41 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
         self.assertNotIn(mock.sentinel.port_id, self.agent._added_ports)
 
-    def test_treat_devices_removed_exception(self):
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_port_unbound')
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_update_port_status_cache')
+    def test_treat_devices_removed_exception(self, mock_update_port_cache,
+                                             mock_port_unbound):
         self.agent._removed_ports = set([mock.sentinel.port_id])
-        attrs = {'update_device_down.side_effect': Exception()}
-        self.agent.plugin_rpc.configure_mock(**attrs)
-        self.agent._treat_devices_removed()
 
-        self.agent.plugin_rpc.update_device_down.assert_called_once_with(
-            self.agent.context, mock.sentinel.port_id,
-            self.agent.agent_id, self.agent._host)
+        raised_exc = exception.NetworkingHyperVException
+        mock_port_unbound.side_effect = raised_exc
+
+        self.assertRaises(raised_exc,
+                          self.agent._treat_devices_removed)
+
+        mock_update_port_cache.assert_called_once_with(
+            mock.sentinel.port_id, device_bound=False)
         self.assertIn(mock.sentinel.port_id, self.agent._removed_ports)
 
-    def mock_treat_devices_removed(self, port_exists):
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_port_unbound')
+    @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
+                       '_update_port_status_cache')
+    def test_treat_devices_removed(self, mock_update_port_cache,
+                                   mock_port_unbound):
         self.agent._removed_ports = set([mock.sentinel.port_id])
-        details = dict(exists=port_exists)
-        attrs = {'update_device_down.return_value': details}
-        self.agent.plugin_rpc.configure_mock(**attrs)
-        with mock.patch.object(self.agent, '_port_unbound') as func:
-            self.agent._treat_devices_removed()
-        self.assertEqual(func.called, not port_exists)
-        self.assertEqual(
-            self.agent.sec_groups_agent.remove_devices_filter.called,
-            not port_exists)
+
+        self.agent._treat_devices_removed()
+
+        mock_update_port_cache.assert_called_once_with(
+            mock.sentinel.port_id, device_bound=False)
+        mock_port_unbound.assert_called_once_with(mock.sentinel.port_id,
+                                                  vnic_deleted=True)
+        self.agent.sec_groups_agent.remove_devices_filter(
+            [mock.sentinel.port_id])
         self.assertNotIn(mock.sentinel.port_id, self.agent._removed_ports)
-
-    def test_treat_devices_removed_unbinds_port(self):
-        self.mock_treat_devices_removed(False)
-
-    def test_treat_devices_removed_ignores_missing_port(self):
-        self.mock_treat_devices_removed(False)
 
     def test_process_added_port_event(self):
         self.agent._added_ports = set()
@@ -593,6 +601,63 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
                            self.agent._process_removed_port_event)]
         mock_spawn.assert_has_calls(calls, any_order=True)
 
+    def test_update_port_status_cache_device_bound(self):
+        self.agent._bound_ports = set()
+        self.agent._unbound_ports = set([mock.sentinel.device])
+
+        self.agent._update_port_status_cache(mock.sentinel.device,
+                                             device_bound=True)
+
+        self.assertIn(mock.sentinel.device, self.agent._bound_ports)
+        self.assertNotIn(mock.sentinel.device, self.agent._unbound_ports)
+
+    def test_update_port_status_cache_device_unbound(self):
+        self.agent._bound_ports = set([mock.sentinel.device])
+        self.agent._unbound_ports = set()
+
+        self.agent._update_port_status_cache(mock.sentinel.device,
+                                             device_bound=False)
+
+        self.assertIn(mock.sentinel.device, self.agent._unbound_ports)
+        self.assertNotIn(mock.sentinel.device, self.agent._bound_ports)
+
+    def test_notify_plugin_no_updates(self):
+        self.agent._bound_ports = set()
+        self.agent._unbound_ports = set()
+
+        self.agent._notify_plugin_on_port_updates()
+
+        self.assertFalse(self.agent.plugin_rpc.update_device_list.called)
+
+    def test_notify_plugin_on_port_updates(self):
+        bound_ports = [mock.sentinel.bound_port]
+        unbound_ports = [mock.sentinel.unbound_port]
+
+        new_bound_ports = set([mock.sentinel.new_bound_port])
+        new_unbound_ports = set([mock.sentinel.new_unbound_port])
+
+        self.agent._bound_ports = set(bound_ports)
+        self.agent._unbound_ports = set(unbound_ports)
+
+        def plugin_rpc_side_effect(*args, **kwargs):
+            # We test the scenario in which we're getting some new port
+            # updates during the plugin rpc call.
+            self.agent._bound_ports.update(new_bound_ports)
+            self.agent._unbound_ports.update(new_unbound_ports)
+
+        mock_update_device_list = self.agent.plugin_rpc.update_device_list
+        mock_update_device_list.side_effect = plugin_rpc_side_effect
+
+        self.agent._notify_plugin_on_port_updates()
+
+        mock_update_device_list.assert_called_once_with(
+            self.agent.context, bound_ports, unbound_ports,
+            self.agent.agent_id, self.agent._host)
+
+        self.assertEqual(new_bound_ports, self.agent._bound_ports)
+        self.assertEqual(new_unbound_ports, self.agent._unbound_ports)
+
+    @mock.patch('eventlet.spawn_n')
     @mock.patch('time.sleep')
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        '_port_enable_control_metrics')
@@ -601,7 +666,7 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        '_create_event_listeners')
     def test_daemon_loop(self, mock_create_listeners, mock_treat_dev_added,
-                         mock_port_enable_metrics, mock_sleep):
+                         mock_port_enable_metrics, mock_sleep, mock_spawn):
         self.agent._nvgre_enabled = True
         mock_port_enable_metrics.side_effect = KeyError
         mock_sleep.side_effect = KeyboardInterrupt
@@ -611,7 +676,12 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.assertEqual(self.agent._utils.get_vnic_ids.return_value,
                          self.agent._added_ports)
         self.assertEqual(set(), self.agent._removed_ports)
+        self.assertEqual(set(), self.agent._bound_ports)
+        self.assertEqual(set(), self.agent._unbound_ports)
+
         mock_create_listeners.assert_called_once_with()
+        mock_spawn.assert_called_once_with(
+            self.agent._notify_plugin_on_port_updates)
         mock_treat_dev_added.assert_called_once_with()
         self.agent._nvgre_ops.refresh_nvgre_records.assert_called_once_with()
         mock_port_enable_metrics.assert_called_with()
