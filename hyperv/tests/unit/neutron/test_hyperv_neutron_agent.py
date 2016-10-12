@@ -541,19 +541,32 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
         self.assertNotIn(mock.sentinel.port_id, self.agent._added_ports)
 
+    @mock.patch('eventlet.spawn_n')
+    def test_treat_devices_removed(self, mock_spawn):
+        mock_removed_ports = [mock.sentinel.port0, mock.sentinel.port1]
+        self.agent._removed_ports = set(mock_removed_ports)
+
+        self.agent._treat_devices_removed()
+
+        mock_spawn.assert_has_calls(
+            [mock.call(self.agent._process_removed_port, port)
+             for port in mock_removed_ports],
+            any_order=True)
+
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        '_port_unbound')
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        '_update_port_status_cache')
-    def test_treat_devices_removed_exception(self, mock_update_port_cache,
-                                             mock_port_unbound):
+    def test_process_removed_port_exception(self, mock_update_port_cache,
+                                            mock_port_unbound):
         self.agent._removed_ports = set([mock.sentinel.port_id])
 
         raised_exc = exception.NetworkingHyperVException
         mock_port_unbound.side_effect = raised_exc
 
         self.assertRaises(raised_exc,
-                          self.agent._treat_devices_removed)
+                          self.agent._process_removed_port,
+                          mock.sentinel.port_id)
 
         mock_update_port_cache.assert_called_once_with(
             mock.sentinel.port_id, device_bound=False)
@@ -563,11 +576,11 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
                        '_port_unbound')
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        '_update_port_status_cache')
-    def test_treat_devices_removed(self, mock_update_port_cache,
-                                   mock_port_unbound):
+    def test_process_removed_port(self, mock_update_port_cache,
+                                  mock_port_unbound):
         self.agent._removed_ports = set([mock.sentinel.port_id])
 
-        self.agent._treat_devices_removed()
+        self.agent._process_removed_port(mock.sentinel.port_id)
 
         mock_update_port_cache.assert_called_once_with(
             mock.sentinel.port_id, device_bound=False)

@@ -378,15 +378,18 @@ networking-plugin-hyperv_agent.html
             self._added_ports.discard(device)
 
     def _treat_devices_removed(self):
-        for device in list(self._removed_ports):
-            self._update_port_status_cache(device, device_bound=False)
+        for device in self._removed_ports.copy():
+            eventlet.spawn_n(self._process_removed_port, device)
 
-            self._port_unbound(device, vnic_deleted=True)
-            self.sec_groups_agent.remove_devices_filter([device])
+    def _process_removed_port(self, device):
+        self._update_port_status_cache(device, device_bound=False)
 
-            # if the port unbind was successful, remove the port from removed
-            # set, so it won't be reprocessed.
-            self._removed_ports.discard(device)
+        self._port_unbound(device, vnic_deleted=True)
+        self.sec_groups_agent.remove_devices_filter([device])
+
+        # if the port unbind was successful, remove the port from removed
+        # set, so it won't be reprocessed.
+        self._removed_ports.discard(device)
 
     def _process_added_port_event(self, port_name):
         LOG.info(_LI("Hyper-V VM vNIC added: %s"), port_name)
