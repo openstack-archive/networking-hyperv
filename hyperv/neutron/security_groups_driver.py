@@ -130,6 +130,10 @@ class HyperVSecurityGroupsDriverMixin(object):
         return newports
 
     def prepare_port_filter(self, port):
+        if not port['port_security_enabled']:
+            LOG.info(_LI('Port %s does not have security enabled. '
+                         'Skipping rules creation.'), port['id'])
+            return
         LOG.debug('Creating port %s rules', len(port['security_group_rules']))
 
         # newly created port, add default rules.
@@ -201,6 +205,13 @@ class HyperVSecurityGroupsDriverMixin(object):
         LOG.info(_LI('Aplying port filter.'))
 
     def update_port_filter(self, port):
+        if not port['port_security_enabled']:
+            LOG.info(_LI('Port %s does not have security enabled. '
+                         'Removing existing rules if any.'), port['id'])
+            existing_rules = self._sec_group_rules.pop(port['id'], None)
+            if existing_rules:
+                self._utils.remove_all_security_rules(port['id'])
+            return
         LOG.info(_LI('Updating port rules.'))
 
         if port['device'] not in self._security_ports:

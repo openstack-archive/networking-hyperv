@@ -179,6 +179,15 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         self._driver._create_port_rules.assert_called_with(
             self._FAKE_ID, [fake_rule])
 
+    def test_prepare_port_filter_security_disabled(self):
+        mock_port = self._get_port()
+        mock_port['port_security_enabled'] = False
+
+        self._driver.prepare_port_filter(mock_port)
+
+        self.assertNotIn(mock_port['device'], self._driver._security_ports)
+        self.assertNotIn(mock_port['id'], self._driver._sec_group_rules)
+
     @mock.patch.object(sg_driver.HyperVSecurityGroupsDriver,
                        '_generate_rules')
     def test_update_port_filter(self, mock_gen_rules):
@@ -222,6 +231,28 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
 
         self.assertNotIn(new_mock_port['device'], self._driver._security_ports)
         mock_method.assert_called_once_with(new_mock_port)
+
+    def test_update_port_filter_security_disabled(self):
+        mock_port = self._get_port()
+        mock_port['port_security_enabled'] = False
+
+        self._driver.update_port_filter(mock_port)
+
+        self.assertFalse(self._driver._utils.remove_all_security_rules.called)
+        self.assertNotIn(mock_port['device'], self._driver._security_ports)
+        self.assertNotIn(mock_port['id'], self._driver._sec_group_rules)
+
+    def test_update_port_filter_security_disabled_existing_rules(self):
+        mock_port = self._get_port()
+        mock_port['port_security_enabled'] = False
+        self._driver._sec_group_rules[mock_port['id']] = mock.ANY
+
+        self._driver.update_port_filter(mock_port)
+
+        self._driver._utils.remove_all_security_rules.assert_called_once_with(
+            mock_port['id'])
+        self.assertNotIn(mock_port['device'], self._driver._security_ports)
+        self.assertNotIn(mock_port['id'], self._driver._sec_group_rules)
 
     def test_remove_port_filter(self):
         mock_port = self._get_port()
@@ -343,7 +374,8 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         return {
             'device': self._FAKE_DEVICE,
             'id': self._FAKE_ID,
-            'security_group_rules': [mock.MagicMock()]
+            'security_group_rules': [mock.MagicMock()],
+            'port_security_enabled': True
         }
 
 
