@@ -251,6 +251,49 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         self.assertNotIn(mock_port['device'], self._driver._security_ports)
         self.assertNotIn(mock_port['id'], self._driver._sec_group_rules)
 
+    @mock.patch.object(sg_driver.HyperVSecurityGroupsDriver,
+                       '_generate_rules')
+    def test_update_port_filter_existing_wildcard_rules(self, mock_gen_rules):
+        mock_port = self._get_port()
+        new_mock_port = self._get_port()
+        new_mock_port['id'] += '2'
+        new_mock_port['security_group_rules'][0]['ethertype'] += "2"
+
+        fake_rule_new = self._create_security_rule(direction='egress',
+                                                   protocol='udp')
+        fake_wildcard_rule_new = self._create_security_rule(protocol='ANY',
+                                                            direction='egress')
+        fake_expanded_rules = [
+            self._create_security_rule(direction='egress', protocol='tcp'),
+            self._create_security_rule(direction='egress', protocol='udp'),
+            self._create_security_rule(direction='egress', protocol='icmp')]
+        self._driver._sg_gen.expand_wildcard_rules.return_value = (
+            fake_expanded_rules)
+
+        mock_gen_rules.return_value = {
+            new_mock_port['id']: [fake_rule_new, fake_wildcard_rule_new]}
+
+        self._driver._security_ports[mock_port['device']] = mock_port
+        self._driver._sec_group_rules[new_mock_port['id']] = [
+            self._create_security_rule(direction='egress', protocol='icmp')]
+
+        filtered_new_rules = [new_mock_port['security_group_rules'][0],
+                              fake_wildcard_rule_new]
+        filtered_remove_rules = mock_port['security_group_rules']
+
+        self._driver._create_port_rules = mock.MagicMock()
+        self._driver._remove_port_rules = mock.MagicMock()
+        self._driver.update_port_filter(new_mock_port)
+
+        self._driver._sg_gen.expand_wildcard_rules.assert_called_once_with(
+            [fake_rule_new, fake_wildcard_rule_new])
+        self._driver._remove_port_rules.assert_called_once_with(
+            mock_port['id'], filtered_remove_rules)
+        self._driver._create_port_rules.assert_called_once_with(
+            new_mock_port['id'], filtered_new_rules)
+        self.assertEqual(new_mock_port,
+                         self._driver._security_ports[new_mock_port['device']])
+
     def test_remove_port_filter(self):
         mock_port = self._get_port()
         mock_rule = mock.MagicMock()
@@ -482,6 +525,38 @@ class SecurityGroupRuleGeneratorR2TestCase(SecurityGroupRuleR2BaseTestCase):
             [old_rule], [new_rule, old_rule])
 
         self.assertEqual([new_rule], add_rules)
+
+    def test_expand_wildcard_rules(self):
+        egress_wildcard_rule = self._create_security_rule(
+            protocol='ANY',
+            direction='egress')
+        ingress_wildcard_rule = self._create_security_rule(
+            protocol='ANY',
+            direction='ingress')
+        normal_rule = self._create_security_rule()
+        rules = [egress_wildcard_rule, ingress_wildcard_rule, normal_rule]
+
+        actual_expanded_rules = self.sg_gen.expand_wildcard_rules(rules)
+
+        expanded_rules = []
+        for proto in sg_driver.ACL_PROP_MAP['protocol'].keys():
+            expanded_rules.extend(
+                [self._create_security_rule(protocol=proto,
+                                            direction='egress'),
+                 self._create_security_rule(protocol=proto,
+                                            direction='ingress')])
+        diff_expanded_rules = [r for r in expanded_rules
+                               if r not in actual_expanded_rules]
+        self.assertEqual([], diff_expanded_rules)
+
+    def test_expand_no_wildcard_rules(self):
+        normal_rule = self._create_security_rule(direction='egress')
+        another_normal_rule = self._create_security_rule(direction='ingress')
+
+        actual_expanded_rules = self.sg_gen.expand_wildcard_rules(
+            [normal_rule, another_normal_rule])
+
+        self.assertEqual([], actual_expanded_rules)
 
     def test_get_rule_port_range(self):
         rule = self._create_security_rule()

@@ -228,6 +228,9 @@ class HyperVSecurityGroupsDriverMixin(object):
         added_provider_rules = port['security_group_rules']
         # Generate the rules
         added_rules = self._generate_rules([port])
+        # Expand wildcard rules
+        expanded_rules = self._sg_gen.expand_wildcard_rules(
+            added_rules[port['id']])
         # Consider added provider rules (if any)
         new_rules = [r for r in added_provider_rules
                      if r not in old_provider_rules]
@@ -240,6 +243,10 @@ class HyperVSecurityGroupsDriverMixin(object):
         # Remove for non provider rules
         remove_rules.extend([r for r in old_provider_rules
                              if r not in added_provider_rules])
+        # Avoid removing or adding rules which are contained in wildcard rules
+        new_rules = [r for r in new_rules if r not in expanded_rules]
+        remove_rules = [r for r in remove_rules if r not in expanded_rules]
+
         LOG.info(_("Creating %(new)s new rules, removing %(old)s "
                    "old rules."),
                  {'new': len(new_rules),
@@ -332,6 +339,26 @@ class SecurityGroupRuleGeneratorR2(SecurityGroupRuleGenerator):
     def compute_new_rules_add(self, old_rules, new_rules):
         add_rules = [r for r in new_rules if r not in old_rules]
         return add_rules, []
+
+    def expand_wildcard_rules(self, rules):
+        wildcard_rules = [
+            r for r in rules
+            if self._get_rule_protocol(r) == ACL_PROP_MAP['default']]
+        rules = []
+        for r in wildcard_rules:
+            rule_copy = r.copy()
+            if rule_copy['direction'] == 'ingress':
+                ip_prefix = 'source_ip_prefix'
+            else:
+                ip_prefix = 'dest_ip_prefix'
+            if ip_prefix not in rule_copy:
+                rule_copy[ip_prefix] = (
+                    ACL_PROP_MAP['address_default'][rule_copy['ethertype']])
+            for proto in list(set(ACL_PROP_MAP['protocol'].keys())):
+                rule_to_add = rule_copy.copy()
+                rule_to_add['protocol'] = proto
+                rules.extend([rule_to_add])
+        return rules
 
     def _get_rule_port_range(self, rule):
         if 'port_range_min' in rule and 'port_range_max' in rule:
