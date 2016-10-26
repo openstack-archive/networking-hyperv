@@ -34,7 +34,7 @@ need to be kept in mind:
 
 * HNV is not enabled by default in Windows / Hyper-V Server 2012.
 
-* The vSwitch used for the NVGRE tunneling must have the Alow Management OS
+* The vSwitch used for the NVGRE tunneling must have the AllowManagementOS
   flag turned off.
 
 * Additional information is needed from Neutron in order to for the feature
