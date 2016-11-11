@@ -21,8 +21,8 @@ import platform
 import sys
 
 import mock
-from neutron.common import constants as n_const
 from neutron.common import topics
+from neutron_lib import constants as n_const
 from oslo_config import cfg
 
 from hyperv.neutron import constants
