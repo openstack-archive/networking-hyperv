@@ -68,7 +68,7 @@ This blueprint proposes solution to the above discussed problem in two parts.
 **Part 1.** The Hyper-V Neutron Agent and the nova-compute service can be
 syncronized, which can help solve the first part of the problem: the VMs are
 currently starting before the neutron ports are properly bound. By waiting for
-the ports to be processed, the VMs will be able to properly aquire the DHCP
+the ports to be processed, the VMs will be able to properly acquire the DHCP
 replies.
 
 Currently, Neutron generates a `vif plugged` notification when a port has been

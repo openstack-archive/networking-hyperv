@@ -77,7 +77,7 @@ To contribute to this project, please go through the following steps.
 4. If the tests pass, commit your code.
 5. Submit your code via ``git review``.
 6. Check that Jenkins and the Microsoft Hyper-V CI pass on your patch.
-7. If there are issues with your commit, ammend, and submit it again via
+7. If there are issues with your commit, amend, and submit it again via
    ``git review``.
 8. Wait for the patch to be reviewed.
 
