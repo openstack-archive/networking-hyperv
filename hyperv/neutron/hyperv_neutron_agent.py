@@ -25,7 +25,6 @@ from os_win import utilsfactory
 from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_log import log as logging
-import six
 import threading
 
 from hyperv.common.i18n import _, _LE, _LW, _LI  # noqa
@@ -144,7 +143,7 @@ networking-plugin-hyperv_agent.html
         return phys_network_name
 
     def _get_network_vswitch_map_by_port_id(self, port_id):
-        for network_id, map in six.iteritems(self._network_vswitch_map):
+        for network_id, map in self._network_vswitch_map.items():
             if port_id in map['ports']:
                 return (network_id, map)
 

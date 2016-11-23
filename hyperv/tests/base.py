@@ -27,7 +27,6 @@ import fixtures
 import mock
 from oslo_config import cfg
 from oslo_utils import strutils
-import six
 import testtools
 
 CONF = cfg.CONF
@@ -95,7 +94,7 @@ class BaseTestCase(testtools.TestCase):
         self.assertEqual(expect_val, actual_val)
 
     def sort_dict_lists(self, dic):
-        for key, value in six.iteritems(dic):
+        for key, value in dic.items():
             if isinstance(value, list):
                 dic[key] = sorted(value)
             elif isinstance(value, dict):
@@ -116,7 +115,7 @@ class BaseTestCase(testtools.TestCase):
         if not isinstance(actual_superset, dict):
             self.fail("actual_superset (%s) is not an instance of dict" %
                       type(actual_superset))
-        for k, v in six.iteritems(expected_subset):
+        for k, v in expected_subset.items():
             self.assertIn(k, actual_superset)
             self.assertEqual(v, actual_superset[k],
                              "Key %(key)s expected: %(exp)r, actual %(act)r" %
@@ -135,5 +134,5 @@ class BaseTestCase(testtools.TestCase):
         test by the fixtures cleanup process.
         """
         group = kw.pop('group', None)
-        for k, v in six.iteritems(kw):
+        for k, v in kw.items():
             CONF.set_override(k, v, group)
