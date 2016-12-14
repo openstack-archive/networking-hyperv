@@ -19,13 +19,12 @@ Unit tests for the Hyper-V Security Groups Driver.
 
 import mock
 from os_win import exceptions
-from os_win import utilsfactory
 
 from hyperv.neutron import security_groups_driver as sg_driver
 from hyperv.tests import base
 
 
-class SecurityGroupRuleTestHelper(base.BaseTestCase):
+class SecurityGroupRuleTestHelper(base.HyperVBaseTestCase):
     _FAKE_DIRECTION = 'egress'
     _FAKE_ETHERTYPE = 'IPv4'
     _FAKE_ETHERTYPE_IPV6 = 'IPv6'
@@ -68,9 +67,6 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
 
     def setUp(self):
         super(TestHyperVSecurityGroupsDriver, self).setUp()
-        utilsfactory_patcher = mock.patch.object(utilsfactory, '_get_class')
-        utilsfactory_patcher.start()
-        self.addCleanup(utilsfactory_patcher.stop)
 
         self._driver = sg_driver.HyperVSecurityGroupsDriver()
         self._driver._utils = mock.MagicMock()

@@ -20,7 +20,6 @@ Unit tests for Windows Hyper-V virtual switch neutron driver
 
 import mock
 from os_win import exceptions
-from os_win import utilsfactory
 from oslo_config import cfg
 
 from hyperv.neutron import constants
@@ -31,15 +30,12 @@ from hyperv.tests import base
 CONF = cfg.CONF
 
 
-class TestHyperVNeutronAgent(base.BaseTestCase):
+class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
 
     _FAKE_PORT_ID = 'fake_port_id'
 
     def setUp(self):
         super(TestHyperVNeutronAgent, self).setUp()
-        utilsfactory_patcher = mock.patch.object(utilsfactory, '_get_class')
-        utilsfactory_patcher.start()
-        self.addCleanup(utilsfactory_patcher.stop)
 
         self.agent = hyperv_neutron_agent.HyperVNeutronAgentMixin()
         self.agent._qos_ext = mock.MagicMock()
@@ -54,6 +50,7 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.agent.notifier = mock.Mock()
         self.agent._utils = mock.MagicMock()
         self.agent._nvgre_ops = mock.MagicMock()
+        self.agent._vlan_driver = mock.MagicMock()
 
     def test_load_physical_network_mappings(self):
         test_mappings = ['fakenetwork1:fake_vswitch',
@@ -338,9 +335,7 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
     @mock.patch.object(hyperv_neutron_agent.HyperVNeutronAgentMixin,
                        '_provision_network')
-    def test_port_bound_nvgre(self, mock_provision_network):
-        self.agent._nvgre_enabled = True
-        network_type = constants.TYPE_NVGRE
+    def _check_port_bound_net_type(self, mock_provision_network, network_type):
         net_uuid = 'my-net-uuid'
         fake_map = {'vswitch_name': mock.sentinel.vswitch_name,
                     'ports': []}
@@ -360,6 +355,17 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
             mock.sentinel.physical_network, mock.sentinel.segmentation_id)
         self.agent._utils.connect_vnic_to_vswitch.assert_called_once_with(
             mock.sentinel.vswitch_name, mock.sentinel.port_id)
+
+    def test_port_bound_vlan(self):
+        self._check_port_bound_net_type(network_type=constants.TYPE_VLAN)
+
+        self.agent._vlan_driver.bind_vlan_port.assert_called_once_with(
+            mock.sentinel.port_id, mock.sentinel.segmentation_id)
+
+    def test_port_bound_nvgre(self):
+        self.agent._nvgre_enabled = True
+        self._check_port_bound_net_type(network_type=constants.TYPE_NVGRE)
+
         self.agent._nvgre_ops.bind_nvgre_port.assert_called_once_with(
             mock.sentinel.segmentation_id, mock.sentinel.vswitch_name,
             mock.sentinel.port_id)

@@ -250,12 +250,7 @@ networking-plugin-hyperv_agent.html
         self._utils.connect_vnic_to_vswitch(map['vswitch_name'], port_id)
 
         if network_type == constants.TYPE_VLAN:
-            LOG.info(_LI('Binding VLAN ID %(segmentation_id)s '
-                         'to switch port %(port_id)s'),
-                     dict(segmentation_id=segmentation_id, port_id=port_id))
-            self._utils.set_vswitch_port_vlan_id(
-                segmentation_id,
-                port_id)
+            self._vlan_driver.bind_vlan_port(port_id, segmentation_id)
         elif network_type == constants.TYPE_NVGRE and self._nvgre_enabled:
             self._nvgre_ops.bind_nvgre_port(
                 segmentation_id, map['vswitch_name'], port_id)

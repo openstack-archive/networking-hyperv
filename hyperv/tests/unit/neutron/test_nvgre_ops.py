@@ -18,7 +18,6 @@ Unit tests for Windows Hyper-V NVGRE driver.
 """
 
 import mock
-from os_win import utilsfactory
 from oslo_config import cfg
 
 from hyperv.neutron import constants
@@ -28,7 +27,7 @@ from hyperv.tests import base
 CONF = cfg.CONF
 
 
-class TestHyperVNvgreOps(base.BaseTestCase):
+class TestHyperVNvgreOps(base.HyperVBaseTestCase):
 
     FAKE_MAC_ADDR = 'fa:ke:ma:ca:dd:re:ss'
     FAKE_CIDR = '10.0.0.0/24'
@@ -36,9 +35,6 @@ class TestHyperVNvgreOps(base.BaseTestCase):
 
     def setUp(self):
         super(TestHyperVNvgreOps, self).setUp()
-        utilsfactory_patcher = mock.patch.object(utilsfactory, '_get_class')
-        utilsfactory_patcher.start()
-        self.addCleanup(utilsfactory_patcher.stop)
 
         self.context = 'context'
         self.ops = nvgre_ops.HyperVNvgreOps([])
