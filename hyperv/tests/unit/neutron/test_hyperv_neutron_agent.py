@@ -116,7 +116,7 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
 
     @mock.patch.object(hyperv_neutron_agent.nvgre_ops, 'HyperVNvgreOps')
     def test_init_nvgre_disabled(self, mock_hyperv_nvgre_ops):
-        self.agent._init_nvgre()
+        self.agent.init_nvgre()
         self.assertFalse(mock_hyperv_nvgre_ops.called)
         self.assertFalse(self.agent._nvgre_enabled)
 
@@ -124,14 +124,14 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
     def test_init_nvgre_no_tunnel_ip(self, mock_hyperv_nvgre_ops):
         self.config(enable_support=True, group='NVGRE')
         self.assertRaises(exception.NetworkingHyperVException,
-                          self.agent._init_nvgre)
+                          self.agent.init_nvgre)
 
     @mock.patch.object(hyperv_neutron_agent.nvgre_ops, 'HyperVNvgreOps')
     def test_init_nvgre_enabled(self, mock_hyperv_nvgre_ops):
         self.config(enable_support=True, group='NVGRE')
         self.config(provider_tunnel_ip=mock.sentinel.tunneling_ip,
                     group='NVGRE')
-        self.agent._init_nvgre()
+        self.agent.init_nvgre()
         mock_hyperv_nvgre_ops.assert_called_once_with(
             list(self.agent._physical_network_mappings.values()))
 

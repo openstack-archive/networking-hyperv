@@ -73,9 +73,10 @@ class HyperVNeutronAgent(hyperv_neutron_agent.HyperVNeutronAgentMixin):
     target = oslo_messaging.Target(version='1.1')
 
     def __init__(self):
-        self._setup_rpc()
         super(HyperVNeutronAgent, self).__init__(cfg.CONF)
         self._set_agent_state()
+        self._setup_rpc()
+        self.init_nvgre()
 
     def _set_agent_state(self):
         configurations = self._get_agent_configurations()
