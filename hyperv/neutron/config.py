@@ -56,6 +56,9 @@ HYPERV_AGENT_OPTS = [
               default='169.254.169.254',
               help=_('Specifies the address which will serve the metadata for'
                       ' the instance.')),
+    cfg.BoolOpt('enable_qos_extension',
+                default=False,
+                help=_('Enables the QoS extension.')),
 ]
 
 NVGRE_OPTS = [
