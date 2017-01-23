@@ -119,6 +119,7 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
             self.agent.context, {'start_flag': True})
         self.assertTrue(self.agent.agent_state['start_flag'])
 
+    @mock.patch.object(l2_agent.qos_extension, 'QosAgentExtension')
     @mock.patch.object(l2_agent.loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(l2_agent.n_rpc, 'get_client')
     @mock.patch.object(l2_agent, 'HyperVSecurityAgent')
@@ -127,9 +128,10 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
     @mock.patch.object(l2_agent, 'CONF')
     def test_setup_rpc(self, mock_CONF, mock_agent_rpc, mock_SGRpcApi,
                        mock_HyperVSecurityAgent, mock_get_client,
-                       mock_LoopingCall):
+                       mock_LoopingCall, mock_qos_ext):
         mock_CONF.NVGRE.enable_support = True
         mock_CONF.AGENT.report_interval = mock.sentinel.report_interval
+        mock_CONF.AGENT.enable_qos_extension = True
         self.agent._setup_rpc()
 
         self.assertEqual('hyperv_%s' % platform.node(), self.agent.agent_id)
@@ -152,7 +154,13 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
                      [constants.TUNNEL, topics.UPDATE],
                      [constants.LOOKUP, constants.UPDATE]]
         mock_agent_rpc.create_consumers.assert_called_once_with(
-            self.agent.endpoints, self.agent.topic, consumers)
+            self.agent.endpoints, self.agent.topic,
+            consumers, start_listening=False)
+        mock_qos_ext.return_value.consume_api.assert_called_once_with(
+            self.agent)
+        mock_qos_ext.return_value.initialize.assert_called_once_with(
+            self.agent.connection, 'hyperv')
+        self.agent.connection.consume_in_threads.assert_called_once_with()
         mock_LoopingCall.return_value.start.assert_called_once_with(
             interval=mock.sentinel.report_interval)
 

@@ -42,6 +42,7 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
         self.addCleanup(utilsfactory_patcher.stop)
 
         self.agent = hyperv_neutron_agent.HyperVNeutronAgentMixin()
+        self.agent._qos_ext = mock.MagicMock()
         self.agent.plugin_rpc = mock.Mock()
         self.agent._metricsutils = mock.MagicMock()
         self.agent._utils = mock.MagicMock()
@@ -480,9 +481,11 @@ class TestHyperVNeutronAgent(base.BaseTestCase):
                                 mock_treat_vif_port):
         self.agent._added_ports = set()
         details = self._get_fake_port_details()
-
+        CONF.AGENT.enable_qos_extension = True
         self.agent._process_added_port(details)
 
+        self.agent._qos_ext.handle_port.assert_called_once_with(
+            self.agent.context, details)
         mock_treat_vif_port.assert_called_once_with(
             mock.sentinel.port_id, mock.sentinel.network_id,
             mock.sentinel.network_type, mock.sentinel.physical_network,
