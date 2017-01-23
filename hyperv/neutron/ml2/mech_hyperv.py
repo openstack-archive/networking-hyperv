@@ -16,8 +16,8 @@
 
 import re
 
-from neutron.extensions import portbindings
 from neutron.plugins.ml2.drivers import mech_agent
+from neutron_lib.api.definitions import portbindings
 
 from hyperv.neutron import constants
 
