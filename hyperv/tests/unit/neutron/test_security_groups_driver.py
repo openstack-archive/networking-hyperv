@@ -178,7 +178,7 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
 
     def test_prepare_port_filter_security_disabled(self):
         mock_port = self._get_port()
-        mock_port['port_security_enabled'] = False
+        mock_port.pop('port_security_enabled')
 
         self._driver.prepare_port_filter(mock_port)
 
@@ -241,7 +241,7 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
 
     def test_update_port_filter_security_disabled_existing_rules(self):
         mock_port = self._get_port()
-        mock_port['port_security_enabled'] = False
+        mock_port.pop('port_security_enabled')
         self._driver._sec_group_rules[mock_port['id']] = mock.ANY
 
         self._driver.update_port_filter(mock_port)
