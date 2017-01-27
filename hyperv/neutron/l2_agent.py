@@ -34,6 +34,7 @@ from oslo_service import loopingcall
 from hyperv.common.i18n import _, _LE, _LI  # noqa
 from hyperv.neutron import constants as h_const
 from hyperv.neutron import hyperv_neutron_agent
+from hyperv.neutron import trunk_driver
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -150,6 +151,8 @@ class HyperVNeutronAgent(hyperv_neutron_agent.HyperVNeutronAgentMixin):
             heartbeat = loopingcall.FixedIntervalLoopingCall(
                 self._report_state)
             heartbeat.start(interval=report_interval)
+
+        self._vlan_driver = trunk_driver.HyperVTrunkDriver(self.context)
 
 
 def main():

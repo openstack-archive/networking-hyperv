@@ -25,6 +25,7 @@ import traceback
 import eventlet.timeout
 import fixtures
 import mock
+from os_win import utilsfactory
 from oslo_config import cfg
 from oslo_utils import strutils
 import testtools
@@ -136,3 +137,12 @@ class BaseTestCase(testtools.TestCase):
         group = kw.pop('group', None)
         for k, v in kw.items():
             CONF.set_override(k, v, group)
+
+
+class HyperVBaseTestCase(BaseTestCase):
+    def setUp(self):
+        super(HyperVBaseTestCase, self).setUp()
+
+        utilsfactory_patcher = mock.patch.object(utilsfactory, '_get_class')
+        utilsfactory_patcher.start()
+        self.addCleanup(utilsfactory_patcher.stop)
