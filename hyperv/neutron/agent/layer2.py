@@ -24,6 +24,8 @@ from eventlet import tpool
 from neutron.agent import rpc as agent_rpc
 from neutron.common import rpc as n_rpc
 from neutron.common import topics
+from neutron_lib import constants as n_const
+from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import loopingcall
@@ -37,10 +39,14 @@ LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_group('AGENT', 'hyperv.neutron.config')
 
+_synchronized = lockutils.synchronized_with_prefix('n-hv-agent-')
+
 
 class Layer2Agent(base_agent.BaseAgent):
 
     """Contract class for all the layer two agents."""
+
+    _AGENT_TOPIC = n_const.L2_AGENT_TOPIC
 
     def __init__(self):
         super(Layer2Agent, self).__init__()
@@ -58,6 +64,7 @@ class Layer2Agent(base_agent.BaseAgent):
         self._consumers = []
         self._event_callback_pairs = []
 
+        # Setup the current agent.
         self._setup()
         self._set_agent_state()
         self._setup_rpc()
@@ -255,10 +262,10 @@ class Layer2Agent(base_agent.BaseAgent):
         try:
             devices_details_list = self._plugin_rpc.get_devices_details_list(
                 self._context, self._added_ports, self._agent_id)
-        except Exception as e:
+        except Exception as exc:
             LOG.debug("Unable to get ports details for "
-                      "devices %(devices)s: %(e)s",
-                      {'devices': self._added_ports, 'e': e})
+                      "devices %(devices)s: %(exc)s",
+                      {'devices': self._added_ports, 'exc': exc})
             return
 
         for device_details in devices_details_list:
@@ -292,6 +299,7 @@ class Layer2Agent(base_agent.BaseAgent):
         for device in self._removed_ports.copy():
             eventlet.spawn_n(self._process_removed_port, device)
 
+    @_synchronized('n-plugin-notifier')
     def _notify_plugin_on_port_updates(self):
         if not (self._bound_ports or self._unbound_ports):
             return

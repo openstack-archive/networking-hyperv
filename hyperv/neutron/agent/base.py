@@ -40,6 +40,10 @@ class BaseAgent(object):
 
     """Contact class for all the neutron agents."""
 
+    _AGENT_BINARY = None
+    _AGENT_TYPE = None
+    _AGENT_TOPIC = None
+
     target = oslo_messaging.Target(version='1.3')
 
     def __init__(self):
@@ -74,9 +78,20 @@ class BaseAgent(object):
         self._polling_interval = agent_config.get('polling_interval', 2)
 
     @abc.abstractmethod
+    def _get_agent_configurations(self):
+        """Get configurations for the current agent."""
+        pass
+
     def _set_agent_state(self):
         """Set the state for the agent."""
-        pass
+        self._agent_state = {
+            'agent_type': self._AGENT_TYPE,
+            'binary': self._AGENT_BINARY,
+            'configurations': self._get_agent_configurations(),
+            'host': self._host,
+            'start_flag': True,
+            'topic': self._AGENT_TOPIC,
+        }
 
     @abc.abstractmethod
     def _setup_rpc(self):

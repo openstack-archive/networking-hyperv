@@ -29,7 +29,7 @@ CONF = cfg.CONF
 
 class _BaseAgent(agent_base.BaseAgent):
 
-    def _set_agent_state(self):
+    def _get_agent_configurations(self):
         pass
 
     def _setup_rpc(self):
@@ -55,6 +55,18 @@ class TestBaseAgent(test_base.HyperVBaseTestCase):
         self._agent._connection = mock.MagicMock()
 
         self._agent._state_rpc = mock.MagicMock()
+
+    def test_set_agent_state(self):
+        self._agent._agent_state = {}
+        self._agent._host = mock.sentinel.host
+
+        self._agent._set_agent_state()
+
+        expected_keys = ["binary", "host", "configurations", "agent_type",
+                         "topic", "start_flag"]
+        self.assertEqual(sorted(expected_keys),
+                         sorted(self._agent._agent_state.keys()))
+        self.assertEqual(mock.sentinel.host, self._agent._agent_state["host"])
 
     @mock.patch('time.time')
     @mock.patch('time.sleep')
