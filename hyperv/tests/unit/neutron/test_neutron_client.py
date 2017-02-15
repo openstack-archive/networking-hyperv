@@ -150,3 +150,25 @@ class TestNeutronClient(base.BaseTestCase):
         self._neutron._client.list_ports.side_effect = Exception("Fail")
         actual = self._neutron.get_network_ports()
         self.assertEqual([], actual)
+
+    def test_get_port_profile_id(self):
+        fake_profile_id = 'fake_profile_id'
+        self._neutron._client.show_port.return_value = {
+            'port': {
+                'binding:vif_details': {'port_profile_id': fake_profile_id}
+            }
+        }
+
+        actual = self._neutron.get_port_profile_id(mock.sentinel.port_id)
+
+        self.assertEqual('{%s}' % fake_profile_id, actual)
+        self._neutron._client.show_port.assert_called_once_with(
+            mock.sentinel.port_id)
+
+    def test_get_port_profile_id_failed(self):
+        self._neutron._client.show_port.side_effect = Exception("Fail")
+        actual = self._neutron.get_port_profile_id(mock.sentinel.port_id)
+
+        self.assertEqual({}, actual)
+        self._neutron._client.show_port.assert_called_once_with(
+            mock.sentinel.port_id)

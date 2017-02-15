@@ -21,6 +21,7 @@ from hyperv.common.i18n import _LW, _LE  # noqa
 from hyperv.neutron import constants
 
 CONF = cfg.CONF
+CONF.import_group('neutron', 'hyperv.neutron.config')
 LOG = logging.getLogger(__name__)
 
 
@@ -103,3 +104,13 @@ class NeutronAPIClient(object):
         except Exception as ex:
             LOG.error(_LE("Exception caught: %s"), ex)
         return []
+
+    def get_port_profile_id(self, port_id):
+        try:
+            port = self._client.show_port(port_id)
+            return "{%s}" % (port["port"]["binding:vif_details"]
+                             ["port_profile_id"])
+        except Exception:
+            LOG.exception(_LE("Failed to retrieve profile id for port %s."),
+                          port_id)
+        return {}

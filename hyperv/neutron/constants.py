@@ -16,6 +16,7 @@
 # Topic for tunnel notifications between the plugin and agent
 AGENT_TOPIC = 'q-agent-notifier'
 AGENT_TYPE_HYPERV = 'HyperV agent'
+AGENT_TYPE_HNV = "HNV agent"
 VIF_TYPE_HYPERV = 'hyperv'
 
 TUNNEL = 'tunnel'
@@ -32,3 +33,11 @@ TYPE_VLAN = 'vlan'
 TYPE_NVGRE = 'gre'
 
 IPV4_DEFAULT = '0.0.0.0'
+
+NET_CFG_INSTANCE_ID = "{00000000-0000-0000-0000-000000000000}"
+CDN_LABEL_STRING = "OpenStackHyperVCDN"
+CDN_LABEL_ID = 1111
+PROFILE_NAME = "OpenStackProfile"
+VENDOR_ID = "{00000000-0000-0000-0000-000000000000}"
+VENDOR_NAME = "NetworkController"
+PROFILE_DATA = 1
