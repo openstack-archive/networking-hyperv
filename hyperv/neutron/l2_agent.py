@@ -17,13 +17,13 @@
 import platform
 import sys
 
-from neutron.agent.common import config
 from neutron.agent.l2.extensions import qos as qos_extension
 from neutron.agent import rpc as agent_rpc
 from neutron.agent import securitygroups_rpc as sg_rpc
 from neutron.common import config as common_config
 from neutron.common import rpc as n_rpc
 from neutron.common import topics
+from neutron.conf.agent import common as config
 from neutron_lib import constants as n_const
 from neutron_lib import context
 from oslo_config import cfg
