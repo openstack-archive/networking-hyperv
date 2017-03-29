@@ -690,11 +690,13 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
     def test_daemon_loop(self, mock_create_listeners, mock_treat_dev_added,
                          mock_port_enable_metrics, mock_sleep, mock_spawn):
         self.agent._nvgre_enabled = True
+        self.agent._refresh_cache = True
         mock_port_enable_metrics.side_effect = KeyError
         mock_sleep.side_effect = KeyboardInterrupt
 
         self.assertRaises(KeyboardInterrupt, self.agent.daemon_loop)
 
+        self.assertFalse(self.agent._refresh_cache)
         self.assertEqual(self.agent._utils.get_vnic_ids.return_value,
                          self.agent._added_ports)
         self.assertEqual(set(), self.agent._removed_ports)
