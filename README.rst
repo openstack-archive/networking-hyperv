@@ -22,7 +22,7 @@ Supports Python 2.7, Python 3.3, Python 3.4, and Python 3.5.
 
 * Free software: Apache license
 * Documentation: http://docs.openstack.org/developer/networking-hyperv
-* Source: http://git.openstack.org/cgit/openstack/networking-hyperv
+* Source: https://git.openstack.org/cgit/openstack/networking-hyperv
 * Bugs: http://bugs.launchpad.net/networking-hyperv
 
 
@@ -84,10 +84,10 @@ To contribute to this project, please go through the following steps.
 2. Make modifications on your working tree.
 3. Run unit tests.
 4. If the tests pass, commit your code.
-5. Submit your code via ``git review``.
+5. Submit your code via ``git review -v``.
 6. Check that Jenkins and the Microsoft Hyper-V CI pass on your patch.
 7. If there are issues with your commit, amend, and submit it again via
-   ``git review``.
+   ``git review -v``.
 8. Wait for the patch to be reviewed.
 
 
