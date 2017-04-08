@@ -405,7 +405,7 @@ class SecurityGroupRuleBase(object):
 
 class SecurityGroupRuleR2(SecurityGroupRuleBase):
 
-    _FIELDS = ["Direction", "Action", "LocalPort", "Protocol",
+    _FIELDS = ["Direction", "Action", "LocalPort", "RemotePort", "Protocol",
                "RemoteIPAddress", "Stateful", "IdleSessionTimeout"]
 
     IdleSessionTimeout = 0
@@ -419,6 +419,11 @@ class SecurityGroupRuleR2(SecurityGroupRuleBase):
         self.Direction = direction
         self.Action = action
         self.LocalPort = str(local_port) if is_not_icmp else ''
+        # set port numbers to outbound remote ports in case of "egress"
+        self.RemotePort = ACL_PROP_MAP['default']
+        if self.Direction == ACL_PROP_MAP['direction']['egress']:
+            self.RemotePort = str(local_port) if is_not_icmp else ''
+            self.LocalPort = ACL_PROP_MAP['default'] if is_not_icmp else ''
         self.Protocol = protocol
         self.RemoteIPAddress = remote_addr
         self.Stateful = (is_not_icmp and
