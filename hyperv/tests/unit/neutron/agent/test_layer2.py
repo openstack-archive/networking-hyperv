@@ -35,7 +35,7 @@ CONF = cfg.CONF
 
 class _Layer2Agent(agent_base.Layer2Agent):
 
-    def _set_agent_state(self):
+    def _get_agent_configurations(self):
         pass
 
     def _report_state(self):
