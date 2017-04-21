@@ -98,6 +98,14 @@ NEUTRON_OPTS = [
                help='auth strategy for connecting to neutron in admin context')
 ]
 
+HNV_OPTS = [
+    cfg.StrOpt(
+        "logical_network", default=None,
+        help=("Logical network to use as a medium for tenant network "
+              "traffic.")),
+]
+
 cfg.CONF.register_opts(HYPERV_AGENT_OPTS, "AGENT")
 cfg.CONF.register_opts(NVGRE_OPTS, "NVGRE")
 cfg.CONF.register_opts(NEUTRON_OPTS, 'neutron')
+cfg.CONF.register_opts(HNV_OPTS, "HNV")
