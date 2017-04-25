@@ -377,18 +377,12 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
     @mock.patch.object(layer2.Layer2Agent, "_process_added_port")
     def test_process_added_port(self, mock_process):
         self.config(enable_qos_extension=True, group="AGENT")
-        self.agent._qos_ext.handle_port.side_effect = [None, ValueError]
-        mock_process.return_value = True
-        device_details = self._get_fake_port_details()
 
-        self.agent._process_added_port(device_details)
-        self.assertFalse(self.agent._refresh_cache)
-        self.assertEqual(set(), self.agent._added_ports)
+        self.agent._process_added_port(mock.sentinel.device_details)
 
-        self.agent._process_added_port(device_details)
-        self.assertTrue(self.agent._refresh_cache)
-        self.assertEqual({mock.sentinel.device, },
-                         self.agent._added_ports)
+        mock_process.assert_called_once_with(mock.sentinel.device_details)
+        self.agent._qos_ext.handle_port.assert_called_once_with(
+            self.agent._context, mock.sentinel.device_details)
 
     @mock.patch.object(hyperv_agent.HyperVNeutronAgent,
                        '_port_unbound')

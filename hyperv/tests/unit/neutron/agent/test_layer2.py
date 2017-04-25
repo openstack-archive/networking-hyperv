@@ -20,9 +20,11 @@ import collections
 import eventlet
 import mock
 
+import ddt
 import neutron
 from neutron.common import topics
 from neutron.conf.agent import common as neutron_config
+from os_win import exceptions as os_win_exc
 
 from hyperv.neutron.agent import layer2 as agent_base
 from hyperv.neutron import config
@@ -51,6 +53,7 @@ class _Layer2Agent(agent_base.Layer2Agent):
         pass
 
 
+@ddt.ddt
 class TestLayer2Agent(test_base.HyperVBaseTestCase):
 
     _FAKE_PORT_ID = 'fake_port_id'
@@ -386,13 +389,16 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
     def test_port_unbound_port_not_found(self):
         self._check_port_unbound()
 
+    @ddt.data(os_win_exc.HyperVvNicNotFound(vnic_name='fake_vnic'),
+              os_win_exc.HyperVPortNotFoundException(port_name='fake_port'),
+              Exception)
     @mock.patch.object(_Layer2Agent, '_treat_vif_port')
-    def test_process_added_port_failed(self, mock_treat_vif_port):
-        mock_treat_vif_port.side_effect = exception.NetworkingHyperVException
+    def test_process_added_port_failed(self, side_effect, mock_treat_vif_port):
+        mock_treat_vif_port.side_effect = side_effect
         self._agent._added_ports = set()
         details = self._get_fake_port_details()
 
-        self._agent._process_added_port(details)
+        self._agent.process_added_port(details)
         self.assertIn(mock.sentinel.device, self._agent._added_ports)
 
     def test_treat_devices_added_returns_true_for_missing_device(self):
@@ -413,7 +419,7 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         self._agent._treat_devices_added()
 
         mock_spawn.assert_called_once_with(
-            self._agent._process_added_port, fake_port_details)
+            self._agent.process_added_port, fake_port_details)
         self.assertNotIn(mock.sentinel.device, self._agent._added_ports)
 
     def test_treat_devices_added_missing_port_id(self):
