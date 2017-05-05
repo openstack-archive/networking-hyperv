@@ -23,15 +23,12 @@ import sys
 import mock
 from neutron.common import topics
 from os_win import exceptions
-from oslo_config import cfg
 
 from hyperv.neutron.agent import hyperv_neutron_agent as hyperv_agent
 from hyperv.neutron.agent import layer2
 from hyperv.neutron import constants
 from hyperv.neutron import exception
 from hyperv.tests import base
-
-CONF = cfg.CONF
 
 
 class TestHyperVSecurityAgent(base.BaseTestCase):
@@ -449,7 +446,7 @@ class TestMain(base.BaseTestCase):
         hyperv_agent.main()
 
         mock_config.register_agent_state_opts_helper.assert_called_once_with(
-            CONF)
+            hyperv_agent.CONF)
         mock_common_config.init.assert_called_once_with(sys.argv[1:])
         mock_config.setup_logging.assert_called_once_with()
         mock_hyperv_agent.assert_called_once_with()

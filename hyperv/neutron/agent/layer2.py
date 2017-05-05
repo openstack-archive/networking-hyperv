@@ -26,18 +26,17 @@ from neutron.common import rpc as n_rpc
 from neutron.common import topics
 from neutron_lib import constants as n_const
 from oslo_concurrency import lockutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import loopingcall
 import six
 
 from hyperv.common.i18n import _, _LI, _LE    # noqa
 from hyperv.neutron.agent import base as base_agent
+from hyperv.neutron import config
 from hyperv.neutron import constants
 
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-CONF.import_group('AGENT', 'hyperv.neutron.config')
+CONF = config.CONF
 
 _synchronized = lockutils.synchronized_with_prefix('n-hv-agent-')
 

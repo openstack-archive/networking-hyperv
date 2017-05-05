@@ -14,20 +14,17 @@
 #    under the License.
 
 from os_win import utilsfactory
-from oslo_config import cfg
 from oslo_log import log as logging
 import six
 import uuid
 
 from hyperv.common.i18n import _LI, _LW, _LE  # noqa
+from hyperv.neutron import config
 from hyperv.neutron import constants
 from hyperv.neutron import hyperv_agent_notifier
 from hyperv.neutron import neutron_client
 
-CONF = cfg.CONF
-CONF.import_group('AGENT', 'hyperv.neutron.config')
-CONF.import_group('NVGRE', 'hyperv.neutron.config')
-
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 

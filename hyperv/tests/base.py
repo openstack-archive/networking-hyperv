@@ -26,11 +26,12 @@ import eventlet.timeout
 import fixtures
 import mock
 from os_win import utilsfactory
-from oslo_config import cfg
 from oslo_utils import strutils
 import testtools
 
-CONF = cfg.CONF
+from hyperv.neutron import config
+
+CONF = config.CONF
 
 LOG_FORMAT = "%(asctime)s %(levelname)8s [%(name)s] %(message)s"
 

@@ -19,12 +19,8 @@ Unit tests for Neutron base agent.
 
 import mock
 
-from oslo_config import cfg
-
 from hyperv.neutron.agent import base as agent_base
 from hyperv.tests import base as test_base
-
-CONF = cfg.CONF
 
 
 class _BaseAgent(agent_base.BaseAgent):

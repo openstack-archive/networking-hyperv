@@ -25,20 +25,19 @@ from neutron.common import topics
 from neutron.conf.agent import common as neutron_config
 from os_win import exceptions
 from os_win import utilsfactory
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging
 
 from hyperv.common.i18n import _, _LI, _LW, _LE    # noqa
 from hyperv.neutron import _common_utils as c_util
 from hyperv.neutron.agent import layer2 as hyperv_base
+from hyperv.neutron import config
 from hyperv.neutron import constants as h_constant
 from hyperv.neutron import exception
 from hyperv.neutron import nvgre_ops
 from hyperv.neutron import trunk_driver
 
-CONF = cfg.CONF
-CONF.import_group('NVGRE', 'hyperv.neutron.config')
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 _port_synchronized = c_util.get_port_synchronized_decorator('n-hv-agent-')
@@ -304,7 +303,7 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
 
 def main():
     """The entry point for the Hyper-V Neutron Agent."""
-    neutron_config.register_agent_state_opts_helper(cfg.CONF)
+    neutron_config.register_agent_state_opts_helper(CONF)
     common_config.init(sys.argv[1:])
     neutron_config.setup_logging()
 

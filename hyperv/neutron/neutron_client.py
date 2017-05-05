@@ -14,14 +14,13 @@
 #    under the License.
 
 from neutronclient.v2_0 import client as clientv20
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from hyperv.common.i18n import _LW, _LE  # noqa
+from hyperv.neutron import config
 from hyperv.neutron import constants
 
-CONF = cfg.CONF
-CONF.import_group('neutron', 'hyperv.neutron.config')
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 

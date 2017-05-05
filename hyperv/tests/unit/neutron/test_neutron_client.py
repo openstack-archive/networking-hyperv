@@ -18,13 +18,13 @@ Unit tests for the neutron client.
 """
 
 import mock
-from oslo_config import cfg
 
+from hyperv.neutron import config
 from hyperv.neutron import constants
 from hyperv.neutron import neutron_client
 from hyperv.tests import base
 
-CONF = cfg.CONF
+CONF = config.CONF
 
 
 class TestNeutronClient(base.BaseTestCase):

@@ -23,14 +23,14 @@ import mock
 import neutron
 from neutron.common import topics
 from neutron.conf.agent import common as neutron_config
-from oslo_config import cfg
 
 from hyperv.neutron.agent import layer2 as agent_base
+from hyperv.neutron import config
 from hyperv.neutron import constants
 from hyperv.neutron import exception
 from hyperv.tests import base as test_base
 
-CONF = cfg.CONF
+CONF = config.CONF
 
 
 class _Layer2Agent(agent_base.Layer2Agent):

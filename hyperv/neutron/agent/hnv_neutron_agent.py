@@ -20,18 +20,17 @@ import sys
 
 from neutron.common import config as common_config
 from neutron.conf.agent import common as neutron_config
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from hyperv.common.i18n import _LI    # noqa
 from hyperv.neutron import _common_utils as c_util
 from hyperv.neutron.agent import layer2 as hyperv_base
+from hyperv.neutron import config
 from hyperv.neutron import constants as h_const
 from hyperv.neutron import neutron_client
 
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-CONF.import_group('AGENT', 'hyperv.neutron.config')
+CONF = config.CONF
 
 _port_synchronized = c_util.get_port_synchronized_decorator('n-hv-agent-')
 
@@ -105,7 +104,7 @@ class HNVAgent(hyperv_base.Layer2Agent):
 
 def main():
     """The entry point for the HNV Agent."""
-    neutron_config.register_agent_state_opts_helper(cfg.CONF)
+    neutron_config.register_agent_state_opts_helper(CONF)
     common_config.init(sys.argv[1:])
     neutron_config.setup_logging()
 
