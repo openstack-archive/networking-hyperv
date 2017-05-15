@@ -167,7 +167,8 @@ class TestHyperVNvgreOps(base.HyperVBaseTestCase):
     @mock.patch.object(nvgre_ops.HyperVNvgreOps, '_create_customer_routes')
     def test_bind_nvgre_network(self, mock_create_routes,
                                 mock_refresh_records):
-        self.config(provider_tunnel_ip=mock.sentinel.ip_addr, group='NVGRE')
+        fake_ip = '10.10.10.10'
+        self.config(provider_tunnel_ip=fake_ip, group='NVGRE')
         self.ops._n_client.get_network_subnets.return_value = [
             mock.sentinel.subnet, mock.sentinel.subnet2]
 
@@ -189,7 +190,7 @@ class TestHyperVNvgreOps(base.HyperVBaseTestCase):
         mock_refresh_records.assert_called_once_with(
             network_id=mock.sentinel.net_uuid)
         self.ops._notifier.tunnel_update.assert_called_once_with(
-            self.context, mock.sentinel.ip_addr, mock.sentinel.vsid)
+            self.context, fake_ip, mock.sentinel.vsid)
 
     def _check_create_customer_routes(self, gateway=None):
         self.ops._create_customer_routes(

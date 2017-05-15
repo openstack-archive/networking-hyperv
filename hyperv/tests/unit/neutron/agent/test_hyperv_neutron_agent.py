@@ -87,8 +87,9 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
 
     def test_get_agent_configurations(self):
         self.agent._physical_network_mappings = mock.sentinel.mappings
+        fake_ip = '10.10.10.10'
         self.config(enable_support=True,
-                    provider_tunnel_ip=mock.sentinel.tunnel_ip,
+                    provider_tunnel_ip=fake_ip,
                     group="NVGRE")
 
         agent_configurations = self.agent._get_agent_configurations()
@@ -101,7 +102,7 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
                          sorted(agent_configurations.keys()))
         self.assertEqual(mock.sentinel.mappings,
                          agent_configurations["vswitch_mappings"])
-        self.assertEqual(mock.sentinel.tunnel_ip,
+        self.assertEqual(fake_ip,
                          agent_configurations["tunneling_ip"])
 
     @mock.patch("hyperv.neutron.trunk_driver.HyperVTrunkDriver")
@@ -153,7 +154,8 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
     @mock.patch.object(hyperv_agent.nvgre_ops, 'HyperVNvgreOps')
     def test_init_nvgre_enabled(self, mock_hyperv_nvgre_ops):
         self.config(enable_support=True, group='NVGRE')
-        self.config(provider_tunnel_ip=mock.sentinel.tunneling_ip,
+        fake_ip = '10.10.10.10'
+        self.config(provider_tunnel_ip=fake_ip,
                     group='NVGRE')
         self.agent._init_nvgre()
         mock_hyperv_nvgre_ops.assert_called_once_with(

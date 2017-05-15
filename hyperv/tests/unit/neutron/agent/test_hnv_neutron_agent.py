@@ -57,7 +57,7 @@ class TestHNVAgent(test_base.HyperVBaseTestCase):
                          sorted(agent_configurations.keys()))
         self.assertEqual(mock.sentinel.mappings,
                          agent_configurations["vswitch_mappings"])
-        self.assertEqual(mock.sentinel.logical_network,
+        self.assertEqual(str(mock.sentinel.logical_network),
                          agent_configurations["logical_network"])
 
     @mock.patch.object(hnv_agent.HNVAgent, "_get_vswitch_name")

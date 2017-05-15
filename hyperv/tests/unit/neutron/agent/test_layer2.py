@@ -106,14 +106,14 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
                    mock_set_num_threads):
         self.config(
             group="AGENT",
-            worker_count=mock.sentinel.worker_count,
-            physical_network_vswitch_mappings="fake_mappings",
-            local_network_vswitch=mock.sentinel.local_network_vswitch)
+            worker_count=12,
+            physical_network_vswitch_mappings=["fake_mappings"],
+            local_network_vswitch="local_network_vswitch")
         self._agent._event_callback_pairs = []
 
         self._agent._setup()
 
-        mock_load_phys_net_mapp.assert_called_once_with("fake_mappings")
+        mock_load_phys_net_mapp.assert_called_once_with(["fake_mappings"])
         self._agent._endpoints.append.assert_called_once_with(self._agent)
         self.assertIn((self._agent._utils.EVENT_TYPE_CREATE,
                        mock.sentinel._process_added_port_event),
@@ -132,7 +132,7 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
                        mock_get_client, mock_create_consumers,
                        mock_setup_qos_extension, mock_looping_call):
         self.config(group="AGENT",
-                    report_interval=mock.sentinel.report_interval)
+                    report_interval=1)
         consumers = [[topics.PORT, topics.UPDATE],
                      [topics.NETWORK, topics.DELETE],
                      [topics.PORT, topics.DELETE]]
