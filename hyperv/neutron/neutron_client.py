@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from keystoneauth1 import loading as ks_loading
 from neutronclient.v2_0 import client as clientv20
 from oslo_log import log as logging
 
@@ -30,19 +31,14 @@ class NeutronAPIClient(object):
         self._init_client()
 
     def _init_client(self):
-        params = {
-            'endpoint_url': CONF.neutron.url,
-            'timeout': CONF.neutron.url_timeout,
-            'insecure': True,
-            'ca_cert': None,
-            'username': CONF.neutron.admin_username,
-            'tenant_name': CONF.neutron.admin_tenant_name,
-            'password': CONF.neutron.admin_password,
-            'auth_url': CONF.neutron.admin_auth_url,
-            'auth_strategy': CONF.neutron.auth_strategy
-        }
+        session = ks_loading.load_session_from_conf_options(
+            CONF, config.NEUTRON_GROUP)
+        auth_plugin = ks_loading.load_auth_from_conf_options(
+            CONF, config.NEUTRON_GROUP)
 
-        self._client = clientv20.Client(**params)
+        self._client = clientv20.Client(
+            session=session,
+            auth=auth_plugin)
 
     def get_network_subnets(self, network_id):
         try:

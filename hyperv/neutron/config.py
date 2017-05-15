@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from keystoneauth1 import loading as ks_loading
 from oslo_config import cfg
 
 from hyperv.common.i18n import _
@@ -154,6 +155,8 @@ def register_opts():
 
     CONF.register_group(NEUTRON_GROUP)
     CONF.register_opts(NEUTRON_OPTS, group=NEUTRON_GROUP_NAME)
+    ks_loading.register_session_conf_options(CONF, NEUTRON_GROUP)
+    ks_loading.register_auth_conf_options(CONF, NEUTRON_GROUP)
 
     CONF.register_group(HNV_GROUP)
     CONF.register_opts(HNV_OPTS, group=HNV_GROUP_NAME)
