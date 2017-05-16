@@ -98,7 +98,6 @@ networking-plugin-hyperv_agent.html
         tpool.set_num_threads(self._worker_count)
 
         self._load_physical_network_mappings(self._phys_net_map)
-        self._init_nvgre()
 
     def _load_physical_network_mappings(self, phys_net_vswitch_mappings):
         self._physical_network_mappings = collections.OrderedDict()
@@ -112,7 +111,7 @@ networking-plugin-hyperv_agent.html
                 vswitch = parts[1].strip()
                 self._physical_network_mappings[pattern] = vswitch
 
-    def _init_nvgre(self):
+    def init_nvgre(self):
         # if NVGRE is enabled, self._nvgre_ops is required in order to properly
         # set the agent state (see get_agent_configrations method).
 
