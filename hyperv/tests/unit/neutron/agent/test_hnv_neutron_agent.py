@@ -20,13 +20,10 @@ Unit tests for the Neutron HNV L2 Agent.
 import sys
 
 import mock
-from oslo_config import cfg
 
 from hyperv.neutron.agent import hnv_neutron_agent as hnv_agent
 from hyperv.neutron import constants
 from hyperv.tests import base as test_base
-
-CONF = cfg.CONF
 
 
 class TestHNVAgent(test_base.HyperVBaseTestCase):
@@ -136,7 +133,7 @@ class TestMain(test_base.BaseTestCase):
         hnv_agent.main()
 
         mock_config.register_agent_state_opts_helper.assert_called_once_with(
-            CONF)
+            hnv_agent.CONF)
         mock_common_config.init.assert_called_once_with(sys.argv[1:])
         mock_config.setup_logging.assert_called_once_with()
         mock_hnv_agent.assert_called_once_with()

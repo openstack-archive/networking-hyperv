@@ -18,6 +18,17 @@ from oslo_config import cfg
 
 from hyperv.common.i18n import _
 
+CONF = cfg.CONF
+
+
+HYPERV_AGENT_GROUP_NAME = 'AGENT'
+
+HYPERV_AGENT_GROUP = cfg.OptGroup(
+    HYPERV_AGENT_GROUP_NAME,
+    title='Hyper-V Neutron Agent Options',
+    help=('Configuration options for the neutron-hyperv-agent (L2 agent).')
+)
+
 HYPERV_AGENT_OPTS = [
     cfg.ListOpt(
         'physical_network_vswitch_mappings',
@@ -61,6 +72,15 @@ HYPERV_AGENT_OPTS = [
                 help=_('Enables the QoS extension.')),
 ]
 
+
+NVGRE_GROUP_NAME = 'NVGRE'
+
+NVGRE_GROUP = cfg.OptGroup(
+    NVGRE_GROUP_NAME,
+    title='Hyper-V NVGRE Options',
+    help=('Configuration options for NVGRE.')
+)
+
 NVGRE_OPTS = [
     cfg.BoolOpt('enable_support',
                 default=False,
@@ -75,6 +95,16 @@ NVGRE_OPTS = [
               help=_('Specifies the tunnel IP which will be used and '
                      'reported by this host for NVGRE networks.')),
 ]
+
+
+NEUTRON_GROUP_NAME = 'neutron'
+
+NEUTRON_GROUP = cfg.OptGroup(
+    NEUTRON_GROUP_NAME,
+    title='Neutron Options',
+    help=('Configuration options for neutron (network connectivity as a '
+          'service).')
+)
 
 NEUTRON_OPTS = [
     cfg.StrOpt('url',
@@ -98,6 +128,15 @@ NEUTRON_OPTS = [
                help='auth strategy for connecting to neutron in admin context')
 ]
 
+
+HNV_GROUP_NAME = 'HNV'
+
+HNV_GROUP = cfg.OptGroup(
+    HNV_GROUP_NAME,
+    title='HNV Options',
+    help='Configuration options for the Windows Network Controller.'
+)
+
 HNV_OPTS = [
     cfg.StrOpt(
         "logical_network", default=None,
@@ -105,7 +144,19 @@ HNV_OPTS = [
               "traffic.")),
 ]
 
-cfg.CONF.register_opts(HYPERV_AGENT_OPTS, "AGENT")
-cfg.CONF.register_opts(NVGRE_OPTS, "NVGRE")
-cfg.CONF.register_opts(NEUTRON_OPTS, 'neutron')
-cfg.CONF.register_opts(HNV_OPTS, "HNV")
+
+def register_opts():
+    CONF.register_group(HYPERV_AGENT_GROUP)
+    CONF.register_opts(HYPERV_AGENT_OPTS, group=HYPERV_AGENT_GROUP_NAME)
+
+    CONF.register_group(NVGRE_GROUP)
+    CONF.register_opts(NVGRE_OPTS, group=NVGRE_GROUP_NAME)
+
+    CONF.register_group(NEUTRON_GROUP)
+    CONF.register_opts(NEUTRON_OPTS, group=NEUTRON_GROUP_NAME)
+
+    CONF.register_group(HNV_GROUP)
+    CONF.register_opts(HNV_OPTS, group=HNV_GROUP_NAME)
+
+
+register_opts()

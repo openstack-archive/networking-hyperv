@@ -22,17 +22,16 @@ import time
 from neutron.common import topics
 from neutron_lib import context as neutron_context
 from os_win import utilsfactory
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging
 import six
 
 from hyperv.common.i18n import _LE    # noqa
+from hyperv.neutron import config
 
 
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-CONF.import_group('AGENT', 'hyperv.neutron.config')
+CONF = config.CONF
 
 
 @six.add_metaclass(abc.ABCMeta)
