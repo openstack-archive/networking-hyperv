@@ -25,8 +25,9 @@ from hyperv.tests import base
 
 class TestConfig(base.HyperVBaseTestCase):
 
+    @mock.patch.object(config, 'ks_loading')
     @mock.patch.object(config, 'CONF')
-    def test_register_opts(self, mock_CONF):
+    def test_register_opts(self, mock_CONF, mock_ks_loading):
         config.register_opts()
 
         all_groups = [config.HYPERV_AGENT_GROUP, config.NVGRE_GROUP,
@@ -41,3 +42,8 @@ class TestConfig(base.HyperVBaseTestCase):
             (config.HNV_OPTS, config.HNV_GROUP_NAME)]
         mock_CONF.register_opts.assert_has_calls([
             mock.call(opts, group=group) for opts, group in all_opts])
+
+        mock_ks_loading.register_session_conf_options.assert_called_once_with(
+            mock_CONF, config.NEUTRON_GROUP)
+        mock_ks_loading.register_auth_conf_options.assert_called_once_with(
+            mock_CONF, config.NEUTRON_GROUP)

@@ -39,20 +39,20 @@ class TestNeutronClient(base.BaseTestCase):
         self._neutron._client = mock.MagicMock()
 
     @mock.patch.object(neutron_client.clientv20, "Client")
-    def test_init_client(self, mock_client):
+    @mock.patch.object(neutron_client, "ks_loading")
+    def test_init_client(self, mock_ks_loading, mock_client):
         self._neutron._init_client()
 
         self.assertEqual(mock_client.return_value, self._neutron._client)
+        mock_ks_loading.load_session_from_conf_options.assert_called_once_with(
+            CONF, config.NEUTRON_GROUP)
+        mock_ks_loading.load_auth_from_conf_options.assert_called_once_with(
+            CONF, config.NEUTRON_GROUP)
+        session = mock_ks_loading.load_session_from_conf_options.return_value
+        plugin = mock_ks_loading.load_auth_from_conf_options.return_value
         mock_client.assert_called_once_with(
-            endpoint_url=CONF.neutron.url,
-            timeout=CONF.neutron.url_timeout,
-            insecure=True,
-            ca_cert=None,
-            username=CONF.neutron.admin_username,
-            tenant_name=CONF.neutron.admin_tenant_name,
-            password=CONF.neutron.admin_password,
-            auth_url=CONF.neutron.admin_auth_url,
-            auth_strategy=CONF.neutron.auth_strategy)
+            session=session,
+            auth=plugin)
 
     def test_get_network_subnets(self):
         self._neutron._client.show_network.return_value = {
