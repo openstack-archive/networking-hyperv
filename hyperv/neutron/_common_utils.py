@@ -26,7 +26,8 @@ def get_port_synchronized_decorator(lock_prefix):
         # The decorated method is expected to accept the port_id argument.
         def wrapper(*args, **kwargs):
             call_args = inspect.getcallargs(f, *args, **kwargs)
-            port_id = call_args['port_id']
+            port_id = (call_args.get('port_id') or
+                       call_args.get('port', {}).get('id'))
             lock_name = lock_prefix + ('port-lock-%s' % port_id)
 
             @synchronized(lock_name)

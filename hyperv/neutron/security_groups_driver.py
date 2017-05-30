@@ -145,63 +145,70 @@ class HyperVSecurityGroupsDriverMixin(object):
             self._sec_group_rules[port['id']] = []
 
             def_sg_rules = self._sg_gen.create_default_sg_rules()
-            self._add_sg_port_rules(port['id'], def_sg_rules)
+            self._add_sg_port_rules(port, def_sg_rules)
             # Add provider rules
             provider_rules = port['security_group_rules']
-            self._create_port_rules(port['id'], provider_rules)
+            self._create_port_rules(port, provider_rules)
 
         newrules = self._generate_rules([port])
-        self._create_port_rules(port['id'], newrules[port['id']])
+        self._create_port_rules(port, newrules[port['id']])
 
         self._security_ports[port['device']] = port
         self._sec_group_rules[port['id']] = newrules[port['id']]
 
     @_ports_synchronized
-    def _create_port_rules(self, port_id, rules):
+    def _create_port_rules(self, port, rules):
         sg_rules = self._sg_gen.create_security_group_rules(rules)
-        old_sg_rules = self._sec_group_rules[port_id]
+        old_sg_rules = self._sec_group_rules[port['id']]
         add, rm = self._sg_gen.compute_new_rules_add(old_sg_rules, sg_rules)
 
-        self._add_sg_port_rules(port_id, list(set(add)))
-        self._remove_sg_port_rules(port_id, list(set(rm)))
+        self._add_sg_port_rules(port, list(set(add)))
+        self._remove_sg_port_rules(port, list(set(rm)))
 
     @_ports_synchronized
-    def _remove_port_rules(self, port_id, rules):
+    def _remove_port_rules(self, port, rules):
         sg_rules = self._sg_gen.create_security_group_rules(rules)
-        self._remove_sg_port_rules(port_id, list(set(sg_rules)))
+        self._remove_sg_port_rules(port, list(set(sg_rules)))
 
-    def _add_sg_port_rules(self, port_id, sg_rules):
+    def _add_sg_port_rules(self, port, sg_rules):
         if not sg_rules:
             return
-        old_sg_rules = self._sec_group_rules[port_id]
+        old_sg_rules = self._sec_group_rules[port['id']]
         try:
-            self._utils.create_security_rules(port_id, sg_rules)
+            self._utils.create_security_rules(port['id'], sg_rules)
             old_sg_rules.extend(sg_rules)
         except exceptions.NotFound:
             # port no longer exists.
-            self._sec_group_rules.pop(port_id, None)
+            # NOTE(claudiub): In the case of a rebuild / shelve, the
+            # neutron port is not deleted, and it can still be in the cache.
+            # We need to make sure the port's caches are cleared since it is
+            # not valid anymore. The port will be reprocessed in the next
+            # loop iteration.
+            self._sec_group_rules.pop(port['id'], None)
+            self._security_ports.pop(port.get('device'), None)
             raise
         except Exception:
             LOG.exception(_LE('Exception encountered while adding rules for '
-                              'port: %s'), port_id)
+                              'port: %s'), port['id'])
             raise
 
-    def _remove_sg_port_rules(self, port_id, sg_rules):
+    def _remove_sg_port_rules(self, port, sg_rules):
         if not sg_rules:
             return
-        old_sg_rules = self._sec_group_rules[port_id]
+        old_sg_rules = self._sec_group_rules[port['id']]
         try:
-            self._utils.remove_security_rules(port_id, sg_rules)
+            self._utils.remove_security_rules(port['id'], sg_rules)
             for rule in sg_rules:
                 if rule in old_sg_rules:
                     old_sg_rules.remove(rule)
         except exceptions.NotFound:
             # port no longer exists.
-            self._sec_group_rules.pop(port_id, None)
+            self._sec_group_rules.pop(port['id'], None)
+            self._security_ports.pop(port.get('device'), None)
             raise
         except Exception:
             LOG.exception(_LE('Exception encountered while removing rules for '
-                              'port: %s'), port_id)
+                              'port: %s'), port['id'])
             raise
 
     def apply_port_filter(self, port):
@@ -211,6 +218,7 @@ class HyperVSecurityGroupsDriverMixin(object):
         if not port.get('port_security_enabled'):
             LOG.info(_LI('Port %s does not have security enabled. '
                          'Removing existing rules if any.'), port['id'])
+            self._security_ports.pop(port.get('device'), None)
             existing_rules = self._sec_group_rules.pop(port['id'], None)
             if existing_rules:
                 self._utils.remove_all_security_rules(port['id'])
@@ -252,8 +260,8 @@ class HyperVSecurityGroupsDriverMixin(object):
                  {'new': len(new_rules),
                   'old': len(remove_rules)})
 
-        self._create_port_rules(port['id'], new_rules)
-        self._remove_port_rules(old_port['id'], remove_rules)
+        self._create_port_rules(port, new_rules)
+        self._remove_port_rules(old_port, remove_rules)
 
         self._security_ports[port['device']] = port
         self._sec_group_rules[port['id']] = added_rules[port['id']]
