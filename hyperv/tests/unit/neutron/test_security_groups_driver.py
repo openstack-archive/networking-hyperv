@@ -167,10 +167,10 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         mock_gen_rules.assert_called_with([self._driver._security_ports
                                           [self._FAKE_DEVICE]])
         mock_add_rules.assert_called_once_with(
-            self._FAKE_ID, mock_create_default.return_value)
+            mock_port, mock_create_default.return_value)
 
         self._driver._create_port_rules.assert_called_with(
-            self._FAKE_ID, [fake_rule])
+            mock_port, [fake_rule])
 
     def test_prepare_port_filter_security_disabled(self):
         mock_port = self._get_port()
@@ -203,10 +203,10 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         self._driver.update_port_filter(new_mock_port)
 
         self._driver._remove_port_rules.assert_called_once_with(
-            mock_port['id'], mock_port['security_group_rules'])
+            mock_port, mock_port['security_group_rules'])
         self._driver._create_port_rules.assert_called_once_with(
-            new_mock_port['id'], [new_mock_port['security_group_rules'][0],
-                                  fake_rule_new])
+            new_mock_port, [new_mock_port['security_group_rules'][0],
+                            fake_rule_new])
         self.assertEqual(new_mock_port,
                          self._driver._security_ports[new_mock_port['device']])
 
@@ -239,6 +239,7 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         mock_port = self._get_port()
         mock_port.pop('port_security_enabled')
         self._driver._sec_group_rules[mock_port['id']] = mock.ANY
+        self._driver._security_ports[mock_port['device']] = mock.sentinel.port
 
         self._driver.update_port_filter(mock_port)
 
@@ -284,9 +285,9 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         self._driver._sg_gen.expand_wildcard_rules.assert_called_once_with(
             [fake_rule_new, fake_wildcard_rule_new])
         self._driver._remove_port_rules.assert_called_once_with(
-            mock_port['id'], filtered_remove_rules)
+            mock_port, filtered_remove_rules)
         self._driver._create_port_rules.assert_called_once_with(
-            new_mock_port['id'], filtered_new_rules)
+            new_mock_port, filtered_new_rules)
         self.assertEqual(new_mock_port,
                          self._driver._security_ports[new_mock_port['device']])
 
@@ -305,6 +306,7 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
     @mock.patch.object(sg_driver.HyperVSecurityGroupsDriver,
                        '_remove_sg_port_rules')
     def test_create_port_rules(self, mock_remove, mock_add):
+        mock_port = self._get_port()
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = [mock_rule]
         self._driver._sg_gen.create_security_group_rules.return_value = [
@@ -312,26 +314,28 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         self._driver._sg_gen.compute_new_rules_add.return_value = (
             [mock_rule, mock_rule], [mock_rule, mock_rule])
 
-        self._driver._create_port_rules(self._FAKE_ID, [mock_rule])
+        self._driver._create_port_rules(mock_port, [mock_rule])
 
         self._driver._sg_gen.compute_new_rules_add.assert_called_once_with(
             [mock_rule], [mock_rule])
-        mock_remove.assert_called_once_with(self._FAKE_ID, [mock_rule])
-        mock_add.assert_called_once_with(self._FAKE_ID, [mock_rule])
+        mock_remove.assert_called_once_with(mock_port, [mock_rule])
+        mock_add.assert_called_once_with(mock_port, [mock_rule])
 
     @mock.patch.object(sg_driver.HyperVSecurityGroupsDriver,
                        '_remove_sg_port_rules')
     def test_remove_port_rules(self, mock_remove):
+        mock_port = self._get_port()
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = [mock_rule]
         self._driver._sg_gen.create_security_group_rules.return_value = [
             mock_rule]
 
-        self._driver._remove_port_rules(self._FAKE_ID, [mock_rule])
+        self._driver._remove_port_rules(mock_port, [mock_rule])
 
-        mock_remove.assert_called_once_with(self._FAKE_ID, [mock_rule])
+        mock_remove.assert_called_once_with(mock_port, [mock_rule])
 
     def test_add_sg_port_rules_exception(self):
+        mock_port = self._get_port()
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = []
         self._driver._utils.create_security_rules.side_effect = (
@@ -339,36 +343,42 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
 
         self.assertRaises(exceptions.HyperVException,
                           self._driver._add_sg_port_rules,
-                          self._FAKE_ID, [mock_rule])
+                          mock_port, [mock_rule])
 
         self.assertNotIn(mock_rule,
                          self._driver._sec_group_rules[self._FAKE_ID])
 
     def test_add_sg_port_rules_port_not_found(self):
+        mock_port = self._get_port()
         self._driver._sec_group_rules[self._FAKE_ID] = []
+        self._driver._security_ports[self._FAKE_DEVICE] = mock.sentinel.port
         self._driver._utils.create_security_rules.side_effect = (
             exceptions.NotFound(resource='port_id'))
 
         self.assertRaises(exceptions.NotFound,
                           self._driver._add_sg_port_rules,
-                          self._FAKE_ID, [mock.sentinel.rule])
+                          mock_port, [mock.sentinel.rule])
 
         self.assertNotIn(self._FAKE_ID, self._driver._sec_group_rules)
+        self.assertNotIn(self._FAKE_DEVICE, self._driver._security_ports)
 
     def test_add_sg_port_rules(self):
+        mock_port = self._get_port()
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = []
-        self._driver._add_sg_port_rules(self._FAKE_ID, [mock_rule])
+        self._driver._add_sg_port_rules(mock_port, [mock_rule])
 
         self._driver._utils.create_security_rules.assert_called_once_with(
             self._FAKE_ID, [mock_rule])
         self.assertIn(mock_rule, self._driver._sec_group_rules[self._FAKE_ID])
 
     def test_add_sg_port_rules_empty(self):
-        self._driver._add_sg_port_rules(mock.sentinel.id, [])
+        mock_port = self._get_port()
+        self._driver._add_sg_port_rules(mock_port, [])
         self.assertFalse(self._driver._utils.create_security_rules.called)
 
     def test_remove_sg_port_rules_exception(self):
+        mock_port = self._get_port()
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = [mock_rule]
         self._driver._utils.remove_security_rules.side_effect = (
@@ -376,26 +386,30 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
 
         self.assertRaises(exceptions.HyperVException,
                           self._driver._remove_sg_port_rules,
-                          self._FAKE_ID, [mock_rule])
+                          mock_port, [mock_rule])
 
         self.assertIn(mock_rule, self._driver._sec_group_rules[self._FAKE_ID])
 
     def test_remove_sg_port_rules_port_not_found(self):
+        mock_port = self._get_port()
         self._driver._sec_group_rules[self._FAKE_ID] = []
+        self._driver._security_ports[self._FAKE_DEVICE] = mock.sentinel.port
         self._driver._utils.remove_security_rules.side_effect = (
             exceptions.NotFound(resource='port_id'))
 
         self.assertRaises(exceptions.NotFound,
                           self._driver._remove_sg_port_rules,
-                          self._FAKE_ID, [mock.sentinel.rule])
+                          mock_port, [mock.sentinel.rule])
 
         self.assertNotIn(self._FAKE_ID, self._driver._sec_group_rules)
+        self.assertNotIn(self._FAKE_DEVICE, self._driver._security_ports)
 
     def test_remove_sg_port_rules(self):
+        mock_port = self._get_port()
         mock_rule = mock.MagicMock()
         self._driver._sec_group_rules[self._FAKE_ID] = [mock_rule]
         self._driver._remove_sg_port_rules(
-            self._FAKE_ID, [mock_rule, mock.sentinel.other_rule])
+            mock_port, [mock_rule, mock.sentinel.other_rule])
 
         self._driver._utils.remove_security_rules.assert_called_once_with(
             self._FAKE_ID, [mock_rule, mock.sentinel.other_rule])
@@ -403,7 +417,8 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
                          self._driver._sec_group_rules[self._FAKE_ID])
 
     def test_remove_sg_port_rules_empty(self):
-        self._driver._remove_sg_port_rules(mock.sentinel.id, [])
+        mock_port = self._get_port()
+        self._driver._remove_sg_port_rules(mock_port, [])
         self.assertFalse(self._driver._utils.remove_security_rules.called)
 
     def _get_port(self):
