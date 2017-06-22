@@ -25,6 +25,7 @@ from neutron.agent import rpc as agent_rpc
 from neutron.common import rpc as n_rpc
 from neutron.common import topics
 from neutron_lib import constants as n_const
+from os_win import exceptions as os_win_exc
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
 from oslo_service import loopingcall
@@ -228,25 +229,48 @@ class Layer2Agent(base_agent.BaseAgent):
             self._reclaim_local_network(net_uuid)
 
     def _process_added_port(self, device_details):
-        """Process the new ports."""
+        self._treat_vif_port(
+            port_id=device_details['port_id'],
+            network_id=device_details['network_id'],
+            network_type=device_details['network_type'],
+            physical_network=device_details['physical_network'],
+            segmentation_id=device_details['segmentation_id'],
+            admin_state_up=device_details['admin_state_up'])
+
+    def process_added_port(self, device_details):
+        """Process the new ports.
+
+        Wraps _process_added_port, and treats the sucessful and exception
+        cases.
+        """
         device = device_details['device']
         port_id = device_details['port_id']
-
+        reprocess = True
         try:
-            self._treat_vif_port(
-                port_id=device_details['port_id'],
-                network_id=device_details['network_id'],
-                network_type=device_details['network_type'],
-                physical_network=device_details['physical_network'],
-                segmentation_id=device_details['segmentation_id'],
-                admin_state_up=device_details['admin_state_up']
-            )
+            self._process_added_port(device_details)
+
             LOG.debug("Updating cached port %s status as UP.", port_id)
             self._update_port_status_cache(device, device_bound=True)
             LOG.info("Port %s processed.", port_id)
-        except Exception:
-            LOG.exception(_LE("Exception encountered while processing"
-                              " port %s."), port_id)
+        except os_win_exc.HyperVvNicNotFound:
+            LOG.debug('vNIC %s not found. This can happen if the VM was '
+                      'destroyed.', port_id)
+        except os_win_exc.HyperVPortNotFoundException:
+            LOG.debug('vSwitch port %s not found. This can happen if the VM '
+                      'was destroyed.', port_id)
+        except Exception as ex:
+            # NOTE(claudiub): in case of a non-transient error, the port will
+            # be processed over and over again, and will not be reported as
+            # bound (e.g.: InvalidParameterValue when setting QoS), until the
+            # port is deleted. These issues have to be investigated and solved
+            LOG.exception(_LE("Exception encountered while processing "
+                              "port %(port_id)s. Exception: %(ex)s"),
+                          dict(port_id=port_id, ex=ex))
+        else:
+            # no exception encountered, no need to reprocess.
+            reprocess = False
+
+        if reprocess:
             # Readd the port as "added", so it can be reprocessed.
             self._added_ports.add(device)
 
@@ -274,7 +298,7 @@ class Layer2Agent(base_agent.BaseAgent):
                 LOG.info(_LI("Port %(device)s updated. "
                              "Details: %(device_details)s"),
                          {'device': device, 'device_details': device_details})
-                eventlet.spawn_n(self._process_added_port, device_details)
+                eventlet.spawn_n(self.process_added_port, device_details)
             else:
                 LOG.debug(_("Missing port_id from device details: "
                             "%(device)s. Details: %(device_details)s"),

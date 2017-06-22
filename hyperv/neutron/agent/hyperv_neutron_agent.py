@@ -251,22 +251,11 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
             self._sec_groups_agent.remove_devices_filter([port_id])
 
     def _process_added_port(self, device_details):
-        status = super(HyperVNeutronAgent, self)._process_added_port(
+        super(HyperVNeutronAgent, self)._process_added_port(
             device_details)
 
-        # If the status is `False` something went wrong and the
-        # port will be processed later.
-        if status and CONF.AGENT.enable_qos_extension:
-            try:
-                self._qos_ext.handle_port(self._context, device_details)
-            except Exception:
-                LOG.exception(_LE("Exception encountered while processing"
-                                  " port %s."), device_details['port_id'])
-                # readd the port as "added", so it can be reprocessed.
-                self._added_ports.add(device_details['device'])
-
-                # Force cache refresh.
-                self._refresh_cache = True
+        if CONF.AGENT.enable_qos_extension:
+            self._qos_ext.handle_port(self._context, device_details)
 
     def _process_removed_port(self, device):
         super(HyperVNeutronAgent, self)._process_removed_port(device)
