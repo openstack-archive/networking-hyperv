@@ -45,8 +45,8 @@ class NeutronAPIClient(object):
             net = self._client.show_network(network_id)
             return net['network']['subnets']
         except Exception as ex:
-            LOG.error(_LE("Could not retrieve network %(network_id)s . Error: "
-                          "%(ex)s"), {'network_id': network_id, 'ex': ex})
+            LOG.error("Could not retrieve network %(network_id)s . Error: "
+                      "%(ex)s", {'network_id': network_id, 'ex': ex})
 
         return []
 
@@ -55,8 +55,8 @@ class NeutronAPIClient(object):
             subnet = self._client.show_subnet(subnet_id)['subnet']
             return (str(subnet['cidr']), str(subnet['gateway_ip']))
         except Exception as ex:
-            LOG.error(_LE("Could not retrieve subnet %(subnet_id)s . Error: "
-                          "%(ex)s: "), {'subnet_id': subnet_id, 'ex': ex})
+            LOG.error("Could not retrieve subnet %(subnet_id)s . Error: "
+                      "%(ex)s: ", {'subnet_id': subnet_id, 'ex': ex})
 
         return None, None
 
@@ -66,8 +66,8 @@ class NeutronAPIClient(object):
             fixed_ips = port['port']['fixed_ips'][0]
             return fixed_ips['ip_address']
         except Exception as ex:
-            LOG.error(_LE("Could not retrieve port %(port_id)s . Error: "
-                          "%(ex)s"), {'port_id': port_id, 'ex': ex})
+            LOG.error("Could not retrieve port %(port_id)s . Error: "
+                      "%(ex)s", {'port_id': port_id, 'ex': ex})
 
         return None
 
@@ -83,21 +83,21 @@ class NeutronAPIClient(object):
                 a.get('configurations', {}).get('tunneling_ip')]
 
             if len(tunneling_ip_agents) < len(tunneling_agents):
-                LOG.warning(_LW('Some agents have NVGRE tunneling enabled, but'
-                                ' do not provide tunneling_ip. Ignoring those '
-                                'agents.'))
+                LOG.warning('Some agents have NVGRE tunneling enabled, but'
+                            ' do not provide tunneling_ip. Ignoring those '
+                            'agents.')
 
             return dict([(a['host'], a['configurations']['tunneling_ip'])
                          for a in tunneling_ip_agents])
         except Exception as ex:
-            LOG.error(_LE("Could not get tunneling agents. Error: %s"), ex)
+            LOG.error("Could not get tunneling agents. Error: %s", ex)
             return {}
 
     def get_network_ports(self, **kwargs):
         try:
             return self._client.list_ports(**kwargs)['ports']
         except Exception as ex:
-            LOG.error(_LE("Exception caught: %s"), ex)
+            LOG.error("Exception caught: %s", ex)
         return []
 
     def get_port_profile_id(self, port_id):
@@ -106,6 +106,6 @@ class NeutronAPIClient(object):
             return "{%s}" % (port["port"]["binding:vif_details"]
                              ["port_profile_id"])
         except Exception:
-            LOG.exception(_LE("Failed to retrieve profile id for port %s."),
+            LOG.exception("Failed to retrieve profile id for port %s.",
                           port_id)
         return {}

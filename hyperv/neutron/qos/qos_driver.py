@@ -38,10 +38,8 @@ class QosHyperVAgentDriver(qos.QosAgentDriver):
         :param port: port object.
         :param qos_policy: the QoS policy to be applied on port.
         """
-        LOG.info(_LI("Setting QoS policy %(qos_policy)s on "
-                     "port %(port)s"),
-                 dict(qos_policy=qos_policy,
-                      port=port))
+        LOG.info("Setting QoS policy %(qos_policy)s on port %(port)s",
+                 dict(qos_policy=qos_policy, port=port))
 
         policy_data = self._get_policy_values(qos_policy)
         self._utils.set_port_qos_rule(port["port_id"], policy_data)
@@ -52,10 +50,8 @@ class QosHyperVAgentDriver(qos.QosAgentDriver):
         :param port: port object.
         :param qos_policy: the QoS policy to be applied on port.
         """
-        LOG.info(_LI("Updating QoS policy %(qos_policy)s on "
-                     "port %(port)s"),
-                 dict(qos_policy=qos_policy,
-                      port=port))
+        LOG.info("Updating QoS policy %(qos_policy)s on port %(port)s",
+                 dict(qos_policy=qos_policy, port=port))
 
         policy_data = self._get_policy_values(qos_policy)
         self._utils.set_port_qos_rule(port["port_id"], policy_data)
@@ -66,10 +62,8 @@ class QosHyperVAgentDriver(qos.QosAgentDriver):
         :param port: port object.
         :param qos_policy: the QoS policy to be removed from port.
         """
-        LOG.info(_LI("Deleting QoS policy %(qos_policy)s on "
-                     "port %(port)s"),
-                 dict(qos_policy=qos_policy,
-                      port=port))
+        LOG.info("Deleting QoS policy %(qos_policy)s on port %(port)s",
+                 dict(qos_policy=qos_policy, port=port))
 
         self._utils.remove_port_qos_rule(port["port_id"])
 
@@ -77,7 +71,7 @@ class QosHyperVAgentDriver(qos.QosAgentDriver):
         result = {}
         for qos_rule in qos_policy.rules:
             if qos_rule.rule_type not in self._SUPPORTED_QOS_RULES:
-                LOG.warning(_LW("Unsupported QoS rule: %(qos_rule)s"),
+                LOG.warning("Unsupported QoS rule: %(qos_rule)s",
                             dict(qos_rule=qos_rule))
                 continue
             result['min_kbps'] = getattr(qos_rule, 'min_kbps',

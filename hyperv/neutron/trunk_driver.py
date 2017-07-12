@@ -115,7 +115,7 @@ class HyperVTrunkDriver(trunk_rpc.TrunkSkeleton):
     def _setup_trunk(self, trunk, vlan_id=None):
         """Sets up VLAN trunk and updates the trunk status."""
 
-        LOG.info(_LI('Binding trunk port: %s.'), trunk)
+        LOG.info('Binding trunk port: %s.', trunk)
         try:
             # bind sub_ports to host.
             self._trunk_rpc.update_subport_bindings(self._context,
@@ -128,14 +128,13 @@ class HyperVTrunkDriver(trunk_rpc.TrunkSkeleton):
                                                 t_const.ACTIVE_STATUS)
         except Exception:
             # something broke
-            LOG.exception(_LE("Failure setting up subports for %s"),
-                          trunk.port_id)
+            LOG.exception("Failure setting up subports for %s", trunk.port_id)
             self._trunk_rpc.update_trunk_status(self._context, trunk.id,
                                                 t_const.DEGRADED_STATUS)
 
     def _set_port_vlan(self, port_id, vlan_id, vlan_trunk=None):
-        LOG.info(_LI('Binding VLAN ID: %(vlan_id)s, VLAN trunk: '
-                     '%(vlan_trunk)s to switch port %(port_id)s'),
+        LOG.info('Binding VLAN ID: %(vlan_id)s, VLAN trunk: '
+                 '%(vlan_trunk)s to switch port %(port_id)s',
                  dict(vlan_id=vlan_id, vlan_trunk=vlan_trunk, port_id=port_id))
 
         op_mode = (os_win_const.VLAN_MODE_TRUNK if vlan_trunk else

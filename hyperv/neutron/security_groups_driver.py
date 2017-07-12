@@ -134,8 +134,8 @@ class HyperVSecurityGroupsDriverMixin(object):
 
     def prepare_port_filter(self, port):
         if not port.get('port_security_enabled'):
-            LOG.info(_LI('Port %s does not have security enabled. '
-                         'Skipping rules creation.'), port['id'])
+            LOG.info('Port %s does not have security enabled. '
+                     'Skipping rules creation.', port['id'])
             return
         LOG.debug('Creating port %s rules', len(port['security_group_rules']))
 
@@ -188,8 +188,8 @@ class HyperVSecurityGroupsDriverMixin(object):
             self._security_ports.pop(port.get('device'), None)
             raise
         except Exception:
-            LOG.exception(_LE('Exception encountered while adding rules for '
-                              'port: %s'), port['id'])
+            LOG.exception('Exception encountered while adding rules for '
+                          'port: %s', port['id'])
             raise
 
     def _remove_sg_port_rules(self, port, sg_rules):
@@ -207,26 +207,26 @@ class HyperVSecurityGroupsDriverMixin(object):
             self._security_ports.pop(port.get('device'), None)
             raise
         except Exception:
-            LOG.exception(_LE('Exception encountered while removing rules for '
-                              'port: %s'), port['id'])
+            LOG.exception('Exception encountered while removing rules for '
+                          'port: %s', port['id'])
             raise
 
     def apply_port_filter(self, port):
-        LOG.info(_LI('Aplying port filter.'))
+        LOG.info('Applying port filter.')
 
     def update_port_filter(self, port):
         if not port.get('port_security_enabled'):
-            LOG.info(_LI('Port %s does not have security enabled. '
-                         'Removing existing rules if any.'), port['id'])
+            LOG.info('Port %s does not have security enabled. '
+                     'Removing existing rules if any.', port['id'])
             self._security_ports.pop(port.get('device'), None)
             existing_rules = self._sec_group_rules.pop(port['id'], None)
             if existing_rules:
                 self._utils.remove_all_security_rules(port['id'])
             return
-        LOG.info(_LI('Updating port rules.'))
+        LOG.info('Updating port rules.')
 
         if port['device'] not in self._security_ports:
-            LOG.info(_LI("Device %(port)s not yet added. Adding."),
+            LOG.info("Device %(port)s not yet added. Adding.",
                      {'port': port['id']})
             self.prepare_port_filter(port)
             return
@@ -255,8 +255,7 @@ class HyperVSecurityGroupsDriverMixin(object):
         new_rules = [r for r in new_rules if r not in expanded_rules]
         remove_rules = [r for r in remove_rules if r not in expanded_rules]
 
-        LOG.info(_("Creating %(new)s new rules, removing %(old)s "
-                   "old rules."),
+        LOG.info("Creating %(new)s new rules, removing %(old)s old rules.",
                  {'new': len(new_rules),
                   'old': len(remove_rules)})
 
@@ -267,7 +266,7 @@ class HyperVSecurityGroupsDriverMixin(object):
         self._sec_group_rules[port['id']] = added_rules[port['id']]
 
     def remove_port_filter(self, port):
-        LOG.info(_LI('Removing port filter'))
+        LOG.info('Removing port filter')
         self._security_ports.pop(port['device'], None)
         self._sec_group_rules.pop(port['id'], None)
         self._utils.clear_port_sg_acls_cache(port['id'])

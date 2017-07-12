@@ -114,7 +114,7 @@ class BaseAgent(object):
             try:
                 self._work()
             except Exception:
-                LOG.exception(_LE("Error in agent event loop"))
+                LOG.exception("Error in agent event loop")
 
             # Sleep until the end of polling interval
             elapsed = (time.time() - start)
@@ -132,4 +132,4 @@ class BaseAgent(object):
                                          self._agent_state)
             self._agent_state.pop('start_flag', None)
         except Exception:
-            LOG.exception(_LE("Failed reporting state!"))
+            LOG.exception("Failed reporting state!")

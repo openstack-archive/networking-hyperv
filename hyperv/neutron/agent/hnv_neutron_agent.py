@@ -60,7 +60,7 @@ class HNVAgent(hyperv_base.Layer2Agent):
     def _provision_network(self, port_id, net_uuid, network_type,
                            physical_network, segmentation_id):
         """Provision the network with the received information."""
-        LOG.info(_LI("Provisioning network %s"), net_uuid)
+        LOG.info("Provisioning network %s", net_uuid)
 
         vswitch_name = self._get_vswitch_name(network_type, physical_network)
         vswitch_map = {
@@ -111,5 +111,5 @@ def main():
     hnv_agent = HNVAgent()
 
     # Start everything.
-    LOG.info(_LI("Agent initialized successfully, now running... "))
+    LOG.info("Agent initialized successfully, now running... ")
     hnv_agent.daemon_loop()

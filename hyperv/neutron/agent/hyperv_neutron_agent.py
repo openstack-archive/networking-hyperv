@@ -155,7 +155,7 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
     def _provision_network(self, port_id, net_uuid, network_type,
                            physical_network, segmentation_id):
         """Provision the network with the received information."""
-        LOG.info(_LI("Provisioning network %s"), net_uuid)
+        LOG.info("Provisioning network %s", net_uuid)
 
         vswitch_name = self._get_vswitch_name(network_type, physical_network)
         if network_type == h_constant.TYPE_VLAN:
@@ -203,7 +203,7 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
         elif network_type == h_constant.TYPE_LOCAL:
             pass    # Nothing to do
         else:
-            LOG.error(_LE('Unsupported network type %s'), network_type)
+            LOG.error('Unsupported network type %s', network_type)
 
         if self._enable_metrics_collection:
             self._utils.add_metrics_collection_acls(port_id)
@@ -217,11 +217,11 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
             try:
                 if self._utils.is_metrics_collection_allowed(port_id):
                     self._metricsutils.enable_port_metrics_collection(port_id)
-                    LOG.info(_LI('Port metrics enabled for port: %s'), port_id)
+                    LOG.info('Port metrics enabled for port: %s', port_id)
                     del self._port_metric_retries[port_id]
                 elif self._port_metric_retries[port_id] < 1:
                     self._metricsutils.enable_port_metrics_collection(port_id)
-                    LOG.error(_LE('Port metrics raw enabling for port: %s'),
+                    LOG.error('Port metrics raw enabling for port: %s',
                               port_id)
                     del self._port_metric_retries[port_id]
                 else:
@@ -229,8 +229,8 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
             except exceptions.NotFound:
                 # the vNIC no longer exists. it might have been removed or
                 # the VM it was attached to was destroyed.
-                LOG.warning(_LW("Port %s no longer exists. Cannot enable "
-                                "metrics."), port_id)
+                LOG.warning("Port %s no longer exists. Cannot enable "
+                            "metrics.", port_id)
                 del self._port_metric_retries[port_id]
 
     @_port_synchronized
@@ -262,8 +262,8 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
         try:
             self._sec_groups_agent.remove_devices_filter([device])
         except Exception:
-            LOG.exception(_LE("Exception encountered while processing"
-                              " port %s."), device)
+            LOG.exception("Exception encountered while processing"
+                          " port %s.", device)
             # Readd the port as "removed", so it can be reprocessed.
             self._removed_ports.add(device)
             raise
@@ -276,7 +276,7 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
         self._port_enable_control_metrics()
 
     def tunnel_update(self, context, **kwargs):
-        LOG.info(_LI('tunnel_update received: kwargs: %s'), kwargs)
+        LOG.info('tunnel_update received: kwargs: %s', kwargs)
         tunnel_ip = kwargs.get('tunnel_ip')
         if tunnel_ip == CONF.NVGRE.provider_tunnel_ip:
             # the notification should be ignored if it originates from this
@@ -299,5 +299,5 @@ def main():
     hyperv_agent = HyperVNeutronAgent()
 
     # Start everything.
-    LOG.info(_LI("Agent initialized successfully, now running... "))
+    LOG.info("Agent initialized successfully, now running... ")
     hyperv_agent.daemon_loop()

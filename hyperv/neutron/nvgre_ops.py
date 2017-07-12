@@ -50,7 +50,7 @@ class HyperVNvgreOps(object):
 
     def _init_nvgre(self, physical_networks):
         for network in physical_networks:
-            LOG.info(_LI("Adding provider route and address for network: %s"),
+            LOG.info("Adding provider route and address for network: %s",
                      network)
             self._nvgre_utils.create_provider_route(network)
             self._nvgre_utils.create_provider_address(
@@ -65,7 +65,7 @@ class HyperVNvgreOps(object):
         lookup_ip = kwargs.get('lookup_ip')
         lookup_details = kwargs.get('lookup_details')
 
-        LOG.info(_LI("Lookup Received: %(lookup_ip)s, %(lookup_details)s"),
+        LOG.info("Lookup Received: %(lookup_ip)s, %(lookup_details)s",
                  {'lookup_ip': lookup_ip, 'lookup_details': lookup_details})
         if not lookup_ip or not lookup_details:
             return
@@ -82,8 +82,8 @@ class HyperVNvgreOps(object):
                                      tunnel_type)
 
     def _register_lookup_record(self, prov_addr, cust_addr, mac_addr, vsid):
-        LOG.info(_LI('Creating LookupRecord: VSID: %(vsid)s MAC: %(mac_addr)s '
-                     'Customer IP: %(cust_addr)s Provider IP: %(prov_addr)s'),
+        LOG.info('Creating LookupRecord: VSID: %(vsid)s MAC: %(mac_addr)s '
+                 'Customer IP: %(cust_addr)s Provider IP: %(prov_addr)s',
                  dict(vsid=vsid,
                       mac_addr=mac_addr,
                       cust_addr=cust_addr,
@@ -98,15 +98,15 @@ class HyperVNvgreOps(object):
         customer_addr = self._n_client.get_port_ip_address(port_id)
 
         if not provider_addr or not customer_addr:
-            LOG.warning(_LW('Cannot bind NVGRE port. Could not determine '
-                            'provider address (%(prov_addr)s) or customer '
-                            'address (%(cust_addr)s).'),
+            LOG.warning('Cannot bind NVGRE port. Could not determine '
+                        'provider address (%(prov_addr)s) or customer '
+                        'address (%(cust_addr)s).',
                         {'prov_addr': provider_addr,
                          'cust_addr': customer_addr})
             return
 
-        LOG.info(_LI('Binding VirtualSubnetID %(segmentation_id)s '
-                     'to switch port %(port_id)s'),
+        LOG.info('Binding VirtualSubnetID %(segmentation_id)s '
+                 'to switch port %(port_id)s',
                  dict(segmentation_id=segmentation_id, port_id=port_id))
         self._hyperv_utils.set_vswitch_port_vsid(segmentation_id, port_id)
 
@@ -129,8 +129,8 @@ class HyperVNvgreOps(object):
     def bind_nvgre_network(self, segmentation_id, net_uuid, vswitch_name):
         subnets = self._n_client.get_network_subnets(net_uuid)
         if len(subnets) > 1:
-            LOG.warning(_LW("Multiple subnets in the same network is not "
-                            "supported."))
+            LOG.warning("Multiple subnets in the same network is not "
+                        "supported.")
         subnet = subnets[0]
         try:
             cidr, gw = self._n_client.get_network_subnet_cidr_and_gateway(
@@ -141,7 +141,7 @@ class HyperVNvgreOps(object):
             self._create_customer_routes(segmentation_id, cidr, gw, rdid_uuid)
 
         except Exception as ex:
-            LOG.error(_LE("Exception caught: %s"), ex)
+            LOG.error("Exception caught: %s", ex)
 
         self._network_vsids[net_uuid] = segmentation_id
         self.refresh_nvgre_records(network_id=net_uuid)
@@ -156,11 +156,10 @@ class HyperVNvgreOps(object):
             segmentation_id, cidr, constants.IPV4_DEFAULT, rdid_uuid)
 
         if not gw:
-            LOG.info(_LI('Subnet does not have gateway configured. '
-                         'Skipping.'))
+            LOG.info('Subnet does not have gateway configured. Skipping.')
         elif gw.split('.')[-1] == '1':
-            LOG.error(_LE('Subnet has unsupported gateway IP ending in 1: '
-                          '%s. Any other gateway IP is supported.'), gw)
+            LOG.error('Subnet has unsupported gateway IP ending in 1: '
+                      '%s. Any other gateway IP is supported.', gw)
         else:
             # create 0.0.0.0/0 -> gateway customer route
             self._nvgre_utils.create_customer_route(
@@ -193,9 +192,9 @@ class HyperVNvgreOps(object):
 
                 self._nvgre_ports.append(port['id'])
             except Exception as ex:
-                LOG.error(_LE("Exception while adding lookup_record: %(ex)s. "
-                              "VSID: %(vsid)s MAC: %(mac_address)s Customer "
-                              "IP:%(cust_addr)s Provider IP: %(prov_addr)s"),
+                LOG.error("Exception while adding lookup_record: %(ex)s. "
+                          "VSID: %(vsid)s MAC: %(mac_address)s Customer "
+                          "IP:%(cust_addr)s Provider IP: %(prov_addr)s",
                           dict(ex=ex,
                                vsid=segmentation_id,
                                mac_address=mac_addr,

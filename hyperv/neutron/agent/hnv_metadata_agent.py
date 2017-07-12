@@ -54,7 +54,7 @@ class _MetadataProxyHandler(object):
         try:
             return self._proxy_request(req)
         except Exception:
-            LOG.exception(_LE("Unexpected error."))
+            LOG.exception("Unexpected error.")
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')
             explanation = six.text_type(msg)
@@ -149,10 +149,9 @@ class _MetadataProxyHandler(object):
             request.response.body = content
             return request.response
         elif response.status == 403:
-            LOG.warning(_LW(
-                'The remote metadata server responded with Forbidden. This '
-                'response usually occurs when shared secrets do not match.'
-            ))
+            LOG.warning('The remote metadata server responded with Forbidden. '
+                        'This response usually occurs when shared secrets do '
+                        'not match.')
             return webob.exc.HTTPForbidden()
         elif response.status == 400:
             return webob.exc.HTTPBadRequest()
@@ -169,7 +168,7 @@ class _MetadataProxyHandler(object):
         else:
             message = _("The HNV Metadata proxy experienced an internal"
                         " server error.")
-            LOG.warning(_('Unexpected response code: %s') % response.status)
+            LOG.warning('Unexpected response code: %s', response.status)
             return webob.exc.HTTPInternalServerError(explanation=message)
 
 
@@ -216,7 +215,7 @@ class MetadataProxy(base_agent.BaseAgent):
         try:
             self._work()
         except Exception:
-            LOG.exception(_LE("Error in agent."))
+            LOG.exception("Error in agent.")
 
 
 def register_config_opts():

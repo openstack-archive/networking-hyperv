@@ -117,11 +117,11 @@ class Layer2Agent(base_agent.BaseAgent):
 
     def _process_added_port_event(self, port_name):
         """Callback for added ports."""
-        LOG.info(_LI("Hyper-V VM vNIC added: %s"), port_name)
+        LOG.info("Hyper-V VM vNIC added: %s", port_name)
         self._added_ports.add(port_name)
 
     def _process_removed_port_event(self, port_name):
-        LOG.info(_LI("Hyper-V VM vNIC removed: %s"), port_name)
+        LOG.info("Hyper-V VM vNIC removed: %s", port_name)
         self._removed_ports.add(port_name)
 
     def _load_physical_network_mappings(self, phys_net_vswitch_mappings):
@@ -188,7 +188,7 @@ class Layer2Agent(base_agent.BaseAgent):
         self._create_event_listeners()
 
     def _reclaim_local_network(self, net_uuid):
-        LOG.info(_LI("Reclaiming local network %s"), net_uuid)
+        LOG.info("Reclaiming local network %s", net_uuid)
         del self._network_vswitch_map[net_uuid]
 
     def _port_bound(self, port_id, network_id, network_type, physical_network,
@@ -212,7 +212,7 @@ class Layer2Agent(base_agent.BaseAgent):
         )
 
     def _port_unbound(self, port_id, vnic_deleted=False):
-        LOG.debug(_("Trying to unbind the port %r"), port_id)
+        LOG.debug("Trying to unbind the port %r", port_id)
 
         vswitch = self._get_network_vswitch_map_by_port_id(port_id)
         net_uuid, vswitch_map = vswitch
@@ -263,8 +263,8 @@ class Layer2Agent(base_agent.BaseAgent):
             # be processed over and over again, and will not be reported as
             # bound (e.g.: InvalidParameterValue when setting QoS), until the
             # port is deleted. These issues have to be investigated and solved
-            LOG.exception(_LE("Exception encountered while processing "
-                              "port %(port_id)s. Exception: %(ex)s"),
+            LOG.exception("Exception encountered while processing "
+                          "port %(port_id)s. Exception: %(ex)s",
                           dict(port_id=port_id, ex=ex))
         else:
             # no exception encountered, no need to reprocess.
@@ -293,28 +293,28 @@ class Layer2Agent(base_agent.BaseAgent):
 
         for device_details in devices_details_list:
             device = device_details['device']
-            LOG.info(_LI("Adding port %s"), device)
+            LOG.info("Adding port %s", device)
             if 'port_id' in device_details:
-                LOG.info(_LI("Port %(device)s updated. "
-                             "Details: %(device_details)s"),
+                LOG.info("Port %(device)s updated. "
+                         "Details: %(device_details)s",
                          {'device': device, 'device_details': device_details})
                 eventlet.spawn_n(self.process_added_port, device_details)
             else:
-                LOG.debug(_("Missing port_id from device details: "
-                            "%(device)s. Details: %(device_details)s"),
+                LOG.debug("Missing port_id from device details: "
+                          "%(device)s. Details: %(device_details)s",
                           {'device': device, 'device_details': device_details})
 
-            LOG.debug(_("Remove the port from added ports set, so it "
-                        "doesn't get reprocessed."))
+            LOG.debug("Remove the port from added ports set, so it "
+                      "doesn't get reprocessed.")
             self._added_ports.discard(device)
 
     def _process_removed_port(self, device):
         """Process the removed ports."""
-        LOG.debug(_("Trying to remove the port %r"), device)
+        LOG.debug("Trying to remove the port %r", device)
         self._update_port_status_cache(device, device_bound=False)
         self._port_unbound(device, vnic_deleted=True)
 
-        LOG.debug(_("The port was successfully removed."))
+        LOG.debug("The port was successfully removed.")
         self._removed_ports.discard(device)
 
     def _treat_devices_removed(self):
@@ -354,11 +354,11 @@ class Layer2Agent(base_agent.BaseAgent):
 
         # notify plugin about port deltas
         if self._added_ports:
-            LOG.debug(_("Agent loop has new devices!"))
+            LOG.debug("Agent loop has new devices!")
             self._treat_devices_added()
 
         if self._removed_ports:
-            LOG.debug(_("Agent loop has lost devices..."))
+            LOG.debug("Agent loop has lost devices...")
             self._treat_devices_removed()
 
     def port_update(self, context, port=None, network_type=None,
