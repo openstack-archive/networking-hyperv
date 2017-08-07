@@ -243,12 +243,13 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
         self.agent._port_bound(port, net_uuid,
                                'vlan',
                                mock.sentinel.physical_network,
-                               mock.sentinel.segmentation_id)
+                               mock.sentinel.segmentation_id,
+                               False)
 
         mock_super_bound.assert_called_once_with(
             port, net_uuid, 'vlan',
             mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id)
+            mock.sentinel.segmentation_id, False)
         self.assertEqual(enable_metrics,
                          self.agent._utils.add_metrics_collection_acls.called)
 
@@ -272,7 +273,8 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
 
         self.agent._port_bound(mock.sentinel.port_id, net_uuid, network_type,
                                mock.sentinel.physical_network,
-                               mock.sentinel.segmentation_id)
+                               mock.sentinel.segmentation_id,
+                               mock.sentinel.set_port_sriov)
 
         self.assertIn(mock.sentinel.port_id, fake_map['ports'])
         mock_provision_network.assert_called_once_with(
@@ -355,7 +357,7 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
         mock_port_bound.assert_called_once_with(
             mock.sentinel.port_id, mock.sentinel.network_id,
             mock.sentinel.network_type, mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id)
+            mock.sentinel.segmentation_id, False)
 
     def test_treat_vif_port_sg_enabled(self):
         self.agent._enable_security_groups = True

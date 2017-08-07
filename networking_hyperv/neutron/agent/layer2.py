@@ -247,7 +247,7 @@ class Layer2Agent(base_agent.BaseAgent):
         del self._network_vswitch_map[net_uuid]
 
     def _port_bound(self, port_id, network_id, network_type, physical_network,
-                    segmentation_id):
+                    segmentation_id, set_port_sriov):
         """Bind the port to the recived network."""
         LOG.debug("Binding port %s", port_id)
 
@@ -265,6 +265,9 @@ class Layer2Agent(base_agent.BaseAgent):
             vswitch_name=vswitch_map['vswitch_name'],
             switch_port_name=port_id,
         )
+        if set_port_sriov:
+            LOG.debug("Enabling SR-IOV for port: %s", port_id)
+            self._utils.set_vswitch_port_sriov(port_id, True)
 
     def _port_unbound(self, port_id, vnic_deleted=False):
         LOG.debug("Trying to unbind the port %r", port_id)
@@ -284,13 +287,16 @@ class Layer2Agent(base_agent.BaseAgent):
             self._reclaim_local_network(net_uuid)
 
     def _process_added_port(self, device_details):
+        # NOTE(claudiub): A port requiring SR-IOV will specify a PCI slot.
+        set_port_sriov = 'pci_slot' in device_details.get('profile', {})
         self._treat_vif_port(
             port_id=device_details['port_id'],
             network_id=device_details['network_id'],
             network_type=device_details['network_type'],
             physical_network=device_details['physical_network'],
             segmentation_id=device_details['segmentation_id'],
-            admin_state_up=device_details['admin_state_up'])
+            admin_state_up=device_details['admin_state_up'],
+            set_port_sriov=set_port_sriov)
 
     def process_added_port(self, device_details):
         """Process the new ports.
@@ -460,5 +466,5 @@ class Layer2Agent(base_agent.BaseAgent):
     @abc.abstractmethod
     def _treat_vif_port(self, port_id, network_id, network_type,
                         physical_network, segmentation_id,
-                        admin_state_up):
+                        admin_state_up, set_port_sriov=False):
         pass
