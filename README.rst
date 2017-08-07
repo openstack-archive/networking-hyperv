@@ -72,7 +72,7 @@ You can run the unit tests with the following command.
 
 ::
 
-    C:\networking-hyperv> nosetests hyperv\tests
+    C:\networking-hyperv> nosetests networking_hyperv\tests
 
 
 How to contribute

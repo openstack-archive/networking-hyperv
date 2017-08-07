@@ -4,4 +4,4 @@ Usage
 
 To use networking-hyperv in a project::
 
-    import hyperv.neutron
+    import networking_hyperv.neutron

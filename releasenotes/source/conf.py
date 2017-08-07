@@ -67,7 +67,7 @@ bug_tag = ''
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-from hyperv.version import version_info
+from networking_hyperv.version import version_info
 # The full version, including alpha/beta/rc tags.
 release = version_info.version_string_with_vcs()
 # The short X.Y version.
