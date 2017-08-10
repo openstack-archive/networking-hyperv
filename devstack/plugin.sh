@@ -7,7 +7,7 @@ if is_service_enabled networking-hyperv; then
         #if is_service_enabled
         cd $DIR_HYPERV
         echo "Installing Networking-HyperV"
-        setup_develop $DIR_HYPERV
+        setup_develop -e $DIR_HYPERV
 
         echo "Successfully installed netwroking-hyperv"
 
