@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    networking-hyperv can now be installed through its own devstack plugin.
+    This is mandatory when using the "hyperv" ML2 mechanism driver.
+
+    Including the following line in the devstack local.conf file will enable
+    the plugin:
+    enable_plugin networking-hyperv https://github.com/openstack/networking-hyperv
