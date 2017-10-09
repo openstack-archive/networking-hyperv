@@ -15,7 +15,7 @@
 #    under the License.
 
 from neutron.agent.l2.extensions import qos
-from neutron.services.qos import qos_consts
+from neutron_lib.services.qos import constants as qos_consts
 from os_win.utils.network import networkutils
 from oslo_log import log as logging
 
