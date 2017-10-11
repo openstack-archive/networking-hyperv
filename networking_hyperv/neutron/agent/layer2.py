@@ -255,9 +255,14 @@ class Layer2Agent(base_agent.BaseAgent):
         except os_win_exc.HyperVvNicNotFound:
             LOG.debug('vNIC %s not found. This can happen if the VM was '
                       'destroyed.', port_id)
+            reprocess = False
         except os_win_exc.HyperVPortNotFoundException:
             LOG.debug('vSwitch port %s not found. This can happen if the VM '
                       'was destroyed.', port_id)
+            # NOTE(claudiub): just to be on the safe side, in case Hyper-V said
+            # that the port was added, but it hasn't really, we're leaving
+            # reprocess = True. If the VM / vNIC was removed, on the next
+            # reprocess, a HyperVvNicNotFound will be raised.
         except Exception as ex:
             # NOTE(claudiub): in case of a non-transient error, the port will
             # be processed over and over again, and will not be reported as

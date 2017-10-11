@@ -399,7 +399,11 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         details = self._get_fake_port_details()
 
         self._agent.process_added_port(details)
-        self.assertIn(mock.sentinel.device, self._agent._added_ports)
+
+        if isinstance(side_effect, os_win_exc.HyperVvNicNotFound):
+            self.assertNotIn(mock.sentinel.device, self._agent._added_ports)
+        else:
+            self.assertIn(mock.sentinel.device, self._agent._added_ports)
 
     def test_treat_devices_added_returns_true_for_missing_device(self):
         self._agent._added_ports = set([mock.sentinel.port_id])
