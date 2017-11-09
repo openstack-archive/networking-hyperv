@@ -202,7 +202,7 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         self.assertEqual('fake_vswitch_2', get_vswitch('fakenetwork2$'))
         self.assertEqual('fake_vswitch_3', get_vswitch('fakenetwork3'))
         self.assertEqual('fake_vswitch_3', get_vswitch('fakenetwork35'))
-        self.assertEqual('fake_network1', get_vswitch('fake_network1'))
+        self.assertIsNone(get_vswitch('fake_network1'))
 
     def test_get_vswitch_for_physical_network_without_default_switch(self):
         test_mappings = [
@@ -223,7 +223,7 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
             'fakenetwork2:fake_vswitch_2'
         ]
         self._agent._load_physical_network_mappings(test_mappings)
-        self.assertEqual('', get_vswitch(None))
+        self.assertIsNone(get_vswitch(None))
 
         test_mappings = [
             'fakenetwork:fake_vswitch',
@@ -249,6 +249,19 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         self.assertEqual(mock_get_vswitch_for_phys_net.return_value, ret)
         mock_get_vswitch_for_phys_net.assert_called_once_with(
             mock.sentinel.FAKE_PHYSICAL_NETWORK)
+
+    @mock.patch.object(agent_base.Layer2Agent,
+                       "_get_vswitch_for_physical_network")
+    @ddt.data(constants.TYPE_VLAN, constants.TYPE_LOCAL)
+    def test_get_vswitch_name_missing(self, network_type,
+                                      mock_get_vswitch_for_phys_net):
+        mock_get_vswitch_for_phys_net.return_value = None
+        self._agent._local_network_vswitch = ''
+
+        self.assertRaises(exception.NetworkingHyperVException,
+                          self._agent._get_vswitch_name,
+                          network_type,
+                          mock.sentinel.FAKE_PHYSICAL_NETWORK)
 
     def test_get_network_vswitch_map_by_port_id(self):
         net_uuid = 'net-uuid'

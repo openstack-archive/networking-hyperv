@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    The agents no longer use implicit/default vSwitches. The default 'private'
+    local network vSwitch is no longer used and need to be explicitly
+    configured. Also, in case of physical networks that are not included in
+    the physical network mappings, the agent no longer attempts to implicitly
+    use a vSwitch that has the same name.
