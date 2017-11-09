@@ -24,6 +24,7 @@ import ddt
 import neutron
 from neutron.common import topics
 from neutron.conf.agent import common as neutron_config
+from os_win import constants as os_win_const
 from os_win import exceptions as os_win_exc
 
 from networking_hyperv.neutron.agent import layer2 as agent_base
@@ -102,11 +103,13 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
                        mock.sentinel._process_removed_port_event)
     @mock.patch.object(agent_base.Layer2Agent, '_process_added_port_event',
                        mock.sentinel._process_added_port_event)
+    @mock.patch.object(agent_base.Layer2Agent, '_validate_vswitches')
     @mock.patch.object(eventlet.tpool, 'set_num_threads')
     @mock.patch.object(agent_base.Layer2Agent,
                        '_load_physical_network_mappings')
     def test_setup(self, mock_load_phys_net_mapp,
-                   mock_set_num_threads):
+                   mock_set_num_threads,
+                   mock_validate_vswitches):
         self.config(
             group="AGENT",
             worker_count=12,
@@ -117,6 +120,7 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         self._agent._setup()
 
         mock_load_phys_net_mapp.assert_called_once_with(["fake_mappings"])
+        mock_validate_vswitches.assert_called_once_with()
         self._agent._endpoints.append.assert_called_once_with(self._agent)
         self.assertIn((self._agent._utils.EVENT_TYPE_CREATE,
                        mock.sentinel._process_added_port_event),
@@ -187,6 +191,83 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
             sorted(expected),
             sorted(self._agent._physical_network_mappings.items())
         )
+
+    @ddt.data(True, False)
+    @mock.patch.object(agent_base.Layer2Agent, '_validate_vswitch')
+    def test_validate_vswitches(self, all_valid, mock_validate_vswitch):
+        phys_mappings = {
+            'fakenetwork0': mock.sentinel.vswitch_name_0,
+            'fakenetwork1': mock.sentinel.vswitch_name_1
+        }
+        self._agent._physical_network_mappings = phys_mappings
+        self._agent._local_network_vswitch = mock.sentinel.local_vswitch
+
+        exp_vswitch_names = (
+            list(phys_mappings.values()) + [mock.sentinel.local_vswitch])
+
+        mock_validate_vswitch.side_effect = (
+            exception.ValidationError if not all_valid else None,
+            None, None)
+
+        if all_valid:
+            self._agent._validate_vswitches()
+        else:
+            self.assertRaises(exception.ValidationError,
+                              self._agent._validate_vswitches)
+
+        mock_validate_vswitch.assert_has_calls(
+            [mock.call(vswitch_name)
+             for vswitch_name in exp_vswitch_names],
+            any_order=True)
+
+    def test_validate_vswitches_none_configured(self):
+        self._agent._physical_network_mappings = {}
+        self._agent._local_network_vswitch = None
+
+        self.assertRaises(exception.ValidationError,
+                          self._agent._validate_vswitches)
+
+    def test_is_ovs_extension(self):
+        valid_ovs_ext_names = ['Cloudbase Open vSwitch Extension',
+                               'Open vSwitch Extension',
+                               'VendorX ovs',
+                               'open v-switch',
+                               'openvswitch']
+        for ovs_ext_name in valid_ovs_ext_names:
+            self.assertTrue(self._agent._is_ovs_extension(ovs_ext_name))
+
+        self.assertFalse(self._agent._is_ovs_extension('fake extension'))
+
+    @ddt.data({},
+              {'is_valid': False, 'exists': False},
+              {'is_valid': False,
+               'is_ovs_ext': True,
+               'enabled_state': os_win_const.CIM_STATE_ENABLED},
+              {'is_ovs_ext': True,
+               'enabled_state': os_win_const.CIM_STATE_DISABLED},
+              {'enabled_state': os_win_const.CIM_STATE_ENABLED})
+    @ddt.unpack
+    @mock.patch.object(agent_base.Layer2Agent, '_is_ovs_extension')
+    def test_validate_vswitch(self, mock_is_ovs_ext,
+                              is_valid=True, exists=True, is_ovs_ext=False,
+                              enabled_state=os_win_const.CIM_STATE_ENABLED):
+        extension = dict(enabled_state=enabled_state)
+        mock_is_ovs_ext.return_value = is_ovs_ext
+
+        mock_get_ext = self._agent._utils.get_vswitch_extensions
+        mock_get_ext.side_effect = (
+            [[extension]] if exists
+            else os_win_exc.HyperVvSwitchNotFound(message='fake_msg'))
+
+        if is_valid:
+            self._agent._validate_vswitch(mock.sentinel.vswitch_name)
+            mock_is_ovs_ext.assert_called_once_with(extension)
+        else:
+            self.assertRaises(exception.ValidationError,
+                              self._agent._validate_vswitch,
+                              mock.sentinel.vswitch_name)
+
+        mock_get_ext.assert_called_once_with(mock.sentinel.vswitch_name)
 
     def test_get_vswitch_for_physical_network_with_default_switch(self):
         test_mappings = [

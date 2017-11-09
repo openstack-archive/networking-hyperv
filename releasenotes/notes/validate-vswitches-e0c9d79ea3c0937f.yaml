@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    Configured vSwitches are now validated before the agent starts. If any
+    vSwitch is unavailable (missing or having OVS extension enabled), the
+    agent will fail to start.
