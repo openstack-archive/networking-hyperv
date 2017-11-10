@@ -30,18 +30,12 @@ class TestConfig(base.HyperVBaseTestCase):
     def test_register_opts(self, mock_CONF, mock_ks_loading):
         config.register_opts()
 
-        all_groups = [config.HYPERV_AGENT_GROUP, config.NVGRE_GROUP,
-                      config.NEUTRON_GROUP, config.HNV_GROUP]
+        all_groups = [pair[0] for pair in config.ALL_OPTS]
         mock_CONF.register_group.assert_has_calls([
             mock.call(group) for group in all_groups])
 
-        all_opts = [
-            (config.HYPERV_AGENT_OPTS, config.HYPERV_AGENT_GROUP_NAME),
-            (config.NVGRE_OPTS, config.NVGRE_GROUP_NAME),
-            (config.NEUTRON_OPTS, config.NEUTRON_GROUP_NAME),
-            (config.HNV_OPTS, config.HNV_GROUP_NAME)]
         mock_CONF.register_opts.assert_has_calls([
-            mock.call(opts, group=group) for opts, group in all_opts])
+            mock.call(opts, group=group) for group, opts in config.ALL_OPTS])
 
         mock_ks_loading.register_session_conf_options.assert_called_once_with(
             mock_CONF, config.NEUTRON_GROUP)

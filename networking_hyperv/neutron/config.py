@@ -145,21 +145,25 @@ HNV_OPTS = [
               "traffic.")),
 ]
 
+ALL_OPTS = [
+    (HYPERV_AGENT_GROUP, HYPERV_AGENT_OPTS),
+    (NVGRE_GROUP, NVGRE_OPTS),
+    (NEUTRON_GROUP, NEUTRON_OPTS),
+    (HNV_GROUP, HNV_OPTS)
+]
+
 
 def register_opts():
-    CONF.register_group(HYPERV_AGENT_GROUP)
-    CONF.register_opts(HYPERV_AGENT_OPTS, group=HYPERV_AGENT_GROUP_NAME)
+    for group, opts in ALL_OPTS:
+        CONF.register_group(group)
+        CONF.register_opts(opts, group=group)
 
-    CONF.register_group(NVGRE_GROUP)
-    CONF.register_opts(NVGRE_OPTS, group=NVGRE_GROUP_NAME)
-
-    CONF.register_group(NEUTRON_GROUP)
-    CONF.register_opts(NEUTRON_OPTS, group=NEUTRON_GROUP_NAME)
     ks_loading.register_session_conf_options(CONF, NEUTRON_GROUP)
     ks_loading.register_auth_conf_options(CONF, NEUTRON_GROUP)
 
-    CONF.register_group(HNV_GROUP)
-    CONF.register_opts(HNV_OPTS, group=HNV_GROUP_NAME)
+
+def list_opts():
+    return ALL_OPTS
 
 
 register_opts()
