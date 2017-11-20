@@ -319,21 +319,8 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         self.assertNotIn(mock.sentinel.net_id,
                          self._agent._network_vswitch_map)
 
-    def test_port_bound_no_metrics(self):
-        self._agent.enable_metrics_collection = False
-        port = mock.sentinel.port
-        net_uuid = 'my-net-uuid'
-        self._agent._network_vswitch_map[net_uuid] = {
-            'ports': [],
-            'vswitch_name': []
-        }
-        self._agent._port_bound(str(port), net_uuid, 'vlan', None, None)
-
-        self.assertFalse(self._agent._utils.add_metrics_collection_acls.called)
-
-    @mock.patch.object(agent_base.Layer2Agent,
-                       '_provision_network')
-    def _check_port_bound_net_type(self, mock_provision_network, network_type):
+    @mock.patch.object(_Layer2Agent, '_provision_network')
+    def test_port_bound_net_type(self, mock_provision_network):
         net_uuid = 'my-net-uuid'
         fake_map = {'vswitch_name': mock.sentinel.vswitch_name,
                     'ports': []}
@@ -344,16 +331,17 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         mock_provision_network.side_effect = fake_prov_network
 
         self._agent._port_bound(mock.sentinel.port_id,
-                                net_uuid, network_type,
+                                net_uuid, mock.sentinel.network_type,
                                 mock.sentinel.physical_network,
                                 mock.sentinel.segmentation_id)
 
         self.assertIn(mock.sentinel.port_id, fake_map['ports'])
         mock_provision_network.assert_called_once_with(
-            mock.sentinel.port_id, net_uuid, network_type,
+            mock.sentinel.port_id, net_uuid, mock.sentinel.network_type,
             mock.sentinel.physical_network, mock.sentinel.segmentation_id)
         self._agent._utils.connect_vnic_to_vswitch.assert_called_once_with(
-            mock.sentinel.vswitch_name, mock.sentinel.port_id)
+            vswitch_name=mock.sentinel.vswitch_name,
+            switch_port_name=mock.sentinel.port_id)
 
     @mock.patch.object(agent_base.Layer2Agent,
                        '_get_network_vswitch_map_by_port_id')
