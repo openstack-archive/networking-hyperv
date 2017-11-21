@@ -42,6 +42,8 @@ output/*/index.html
 
 # Sphinx
 doc/build
+doc/source/_static/networking-hyperv.conf.sample
+etc/networking-hyperv.conf.sample
 
 # pbr generates these
 AUTHORS
