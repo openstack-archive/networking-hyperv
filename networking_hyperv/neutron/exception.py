@@ -17,3 +17,11 @@
 
 class NetworkingHyperVException(Exception):
     pass
+
+
+class Invalid(NetworkingHyperVException):
+    pass
+
+
+class ValidationError(Invalid):
+    pass

@@ -25,6 +25,7 @@ from neutron.agent import rpc as agent_rpc
 from neutron.common import rpc as n_rpc
 from neutron.common import topics
 from neutron_lib import constants as n_const
+from os_win import constants as os_win_const
 from os_win import exceptions as os_win_exc
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
@@ -48,6 +49,8 @@ class Layer2Agent(base_agent.BaseAgent):
     """Contract class for all the layer two agents."""
 
     _AGENT_TOPIC = n_const.L2_AGENT_TOPIC
+    _OVS_EXT_NAME_RE = re.compile(r'.*((open.?v.?switch)|(ovs)).*',
+                                  re.IGNORECASE)
 
     def __init__(self):
         super(Layer2Agent, self).__init__()
@@ -79,6 +82,7 @@ class Layer2Agent(base_agent.BaseAgent):
         self._local_network_vswitch = agent_config.get(
             'local_network_vswitch')
         self._load_physical_network_mappings(self._phys_net_map)
+        self._validate_vswitches()
 
         self._endpoints.append(self)
         self._event_callback_pairs.extend([
@@ -136,6 +140,49 @@ class Layer2Agent(base_agent.BaseAgent):
                 pattern = pattern + '$'
                 vswitch = parts[1].strip()
                 self._physical_network_mappings[pattern] = vswitch
+
+    def _validate_vswitches(self):
+        vswitch_names = list(self._physical_network_mappings.values())
+        if self._local_network_vswitch:
+            vswitch_names.append(self._local_network_vswitch)
+
+        vswitches_valid = True
+        for vswitch_name in vswitch_names:
+            try:
+                self._validate_vswitch(vswitch_name)
+            except exception.ValidationError:
+                # We're validating all the vSwitches before erroring out.
+                LOG.error("Validating vSwitch %s failed", vswitch_name)
+                vswitches_valid = False
+
+        # We're currently stopping the service if any of the configured
+        # vSwitches are unavailable.
+        if not vswitches_valid:
+            err_msg = _("Validating one or more configured vSwitches failed.")
+            raise exception.ValidationError(err_msg)
+        elif not vswitch_names:
+            err_msg = _("No vSwitch configured.")
+            raise exception.ValidationError(err_msg)
+
+    def _validate_vswitch(self, vswitch_name):
+        try:
+            vswitch_extensions = self._utils.get_vswitch_extensions(
+                vswitch_name)
+        except os_win_exc.HyperVvSwitchNotFound as exc:
+            raise exception.ValidationError(exc.message)
+
+        for ext in vswitch_extensions:
+            if (self._is_ovs_extension(ext) and
+                    ext['enabled_state'] == os_win_const.CIM_STATE_ENABLED):
+                err_msg = _("The Open vSwitch extension is enabled on the "
+                            "'%s' vSwitch. For this reason, this agent "
+                            "cannot use the specified vSwitch.")
+                raise exception.ValidationError(err_msg % vswitch_name)
+
+    def _is_ovs_extension(self, vswitch_extension):
+        # The OVS extension name keeps changing, while some vendors
+        # redistribute it under a different name.
+        return bool(self._OVS_EXT_NAME_RE.match(vswitch_extension))
 
     def _get_vswitch_name(self, network_type, physical_network):
         """Get the vswitch name for the received network information."""
