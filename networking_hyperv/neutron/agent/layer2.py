@@ -35,6 +35,7 @@ from networking_hyperv.common.i18n import _, _LI, _LE    # noqa
 from networking_hyperv.neutron.agent import base as base_agent
 from networking_hyperv.neutron import config
 from networking_hyperv.neutron import constants
+from networking_hyperv.neutron import exception
 
 LOG = logging.getLogger(__name__)
 CONF = config.CONF
@@ -76,7 +77,7 @@ class Layer2Agent(base_agent.BaseAgent):
         self._phys_net_map = agent_config.get(
             'physical_network_vswitch_mappings', [])
         self._local_network_vswitch = agent_config.get(
-            'local_network_vswitch', 'private')
+            'local_network_vswitch')
         self._load_physical_network_mappings(self._phys_net_map)
 
         self._endpoints.append(self)
@@ -143,7 +144,16 @@ class Layer2Agent(base_agent.BaseAgent):
                 physical_network)
         else:
             vswitch_name = self._local_network_vswitch
-        return vswitch_name
+
+        if vswitch_name:
+            return vswitch_name
+
+        err_msg = _("No vSwitch configured for physical network "
+                    "'%(physical_network)s'. Neutron network type: "
+                    "'%(network_type)s'.")
+        raise exception.NetworkingHyperVException(
+            err_msg % dict(physical_network=physical_network,
+                           network_type=network_type))
 
     def _get_vswitch_for_physical_network(self, phys_network_name):
         """Get the vswitch name for the received network name."""
@@ -152,8 +162,6 @@ class Layer2Agent(base_agent.BaseAgent):
                 phys_network_name = ''
             if re.match(pattern, phys_network_name):
                 return self._physical_network_mappings[pattern]
-        # Not found in the mappings, the vswitch has the same name
-        return phys_network_name
 
     def _get_network_vswitch_map_by_port_id(self, port_id):
         """Get the vswitch name for the received port id."""

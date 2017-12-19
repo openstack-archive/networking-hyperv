@@ -39,7 +39,6 @@ HYPERV_AGENT_OPTS = [
                'wildcards, e.g.: ."*:external"')),
     cfg.StrOpt(
         'local_network_vswitch',
-        default='private',
         help=_('Private vswitch name used for local networks')),
     cfg.IntOpt('polling_interval', default=2, min=1,
                help=_("The number of seconds the agent will wait between "

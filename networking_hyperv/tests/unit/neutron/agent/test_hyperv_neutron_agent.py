@@ -232,13 +232,23 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
             constants.TYPE_LOCAL,
             mock.sentinel.FAKE_PHYSICAL_NETWORK)
 
-    def _test_port_bound(self, enable_metrics):
-        self.agent._enable_metrics_collection = enable_metrics
-        port = mock.MagicMock()
+    @mock.patch.object(layer2.Layer2Agent, '_port_bound')
+    def _test_port_bound(self, enable_metrics, mock_super_bound):
         net_uuid = 'my-net-uuid'
+        port = mock.MagicMock()
 
-        self.agent._port_bound(port, net_uuid, 'vlan', None, None)
+        self.agent._enable_metrics_collection = enable_metrics
+        self.agent._network_vswitch_map[net_uuid] = mock.sentinel.vswitch_name
 
+        self.agent._port_bound(port, net_uuid,
+                               'vlan',
+                               mock.sentinel.physical_network,
+                               mock.sentinel.segmentation_id)
+
+        mock_super_bound.assert_called_once_with(
+            port, net_uuid, 'vlan',
+            mock.sentinel.physical_network,
+            mock.sentinel.segmentation_id)
         self.assertEqual(enable_metrics,
                          self.agent._utils.add_metrics_collection_acls.called)
 
