@@ -234,9 +234,12 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
                                'open v-switch',
                                'openvswitch']
         for ovs_ext_name in valid_ovs_ext_names:
-            self.assertTrue(self._agent._is_ovs_extension(ovs_ext_name))
+            ext = dict(name=ovs_ext_name)
+            self.assertTrue(
+                self._agent._is_ovs_extension(ext))
 
-        self.assertFalse(self._agent._is_ovs_extension('fake extension'))
+        ext = dict(name='fake extension')
+        self.assertFalse(self._agent._is_ovs_extension(ext))
 
     @ddt.data({},
               {'is_valid': False, 'exists': False},
