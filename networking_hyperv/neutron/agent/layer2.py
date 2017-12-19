@@ -182,7 +182,7 @@ class Layer2Agent(base_agent.BaseAgent):
     def _is_ovs_extension(self, vswitch_extension):
         # The OVS extension name keeps changing, while some vendors
         # redistribute it under a different name.
-        return bool(self._OVS_EXT_NAME_RE.match(vswitch_extension))
+        return bool(self._OVS_EXT_NAME_RE.match(vswitch_extension['name']))
 
     def _get_vswitch_name(self, network_type, physical_network):
         """Get the vswitch name for the received network information."""
