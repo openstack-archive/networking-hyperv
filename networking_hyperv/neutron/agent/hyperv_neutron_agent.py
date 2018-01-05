@@ -185,11 +185,11 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
         self._network_vswitch_map[net_uuid] = vswitch_map
 
     def _port_bound(self, port_id, network_id, network_type, physical_network,
-                    segmentation_id):
+                    segmentation_id, set_port_sriov):
         """Bind the port to the recived network."""
         super(HyperVNeutronAgent, self)._port_bound(
             port_id, network_id, network_type, physical_network,
-            segmentation_id
+            segmentation_id, set_port_sriov
         )
         vswitch_map = self._network_vswitch_map[network_id]
 
@@ -236,10 +236,10 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
     @_port_synchronized
     def _treat_vif_port(self, port_id, network_id, network_type,
                         physical_network, segmentation_id,
-                        admin_state_up):
+                        admin_state_up, set_port_sriov=False):
         if admin_state_up:
             self._port_bound(port_id, network_id, network_type,
-                             physical_network, segmentation_id)
+                             physical_network, segmentation_id, set_port_sriov)
             # check if security groups is enabled.
             # if not, teardown the security group rules
             if self._enable_security_groups:

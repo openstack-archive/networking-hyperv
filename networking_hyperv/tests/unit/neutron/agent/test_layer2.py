@@ -430,7 +430,7 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         self._agent._port_bound(mock.sentinel.port_id,
                                 net_uuid, mock.sentinel.network_type,
                                 mock.sentinel.physical_network,
-                                mock.sentinel.segmentation_id)
+                                mock.sentinel.segmentation_id, True)
 
         self.assertIn(mock.sentinel.port_id, fake_map['ports'])
         mock_provision_network.assert_called_once_with(
@@ -439,6 +439,8 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         self._agent._utils.connect_vnic_to_vswitch.assert_called_once_with(
             vswitch_name=mock.sentinel.vswitch_name,
             switch_port_name=mock.sentinel.port_id)
+        self._agent._utils.set_vswitch_port_sriov.assert_called_once_with(
+            mock.sentinel.port_id, True)
 
     @mock.patch.object(agent_base.Layer2Agent,
                        '_get_network_vswitch_map_by_port_id')
@@ -474,6 +476,17 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
     def test_port_unbound_port_not_found(self):
         self._check_port_unbound()
 
+    @mock.patch.object(_Layer2Agent, '_treat_vif_port')
+    def test_process_added_port_sriov(self, mock_treat_vif_port):
+        details = self._get_fake_port_details()
+        details.pop('device')
+        port_details = dict(profile={'pci_slot': mock.sentinel.pci_slot},
+                            **self._get_fake_port_details())
+
+        self._agent.process_added_port(port_details)
+        mock_treat_vif_port.assert_called_once_with(set_port_sriov=True,
+                                                    **details)
+
     @ddt.data(os_win_exc.HyperVvNicNotFound(vnic_name='fake_vnic'),
               os_win_exc.HyperVPortNotFoundException(port_name='fake_port'),
               Exception)
@@ -482,13 +495,18 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         mock_treat_vif_port.side_effect = side_effect
         self._agent._added_ports = set()
         details = self._get_fake_port_details()
+        details.pop('device')
+        port_details = self._get_fake_port_details()
 
-        self._agent.process_added_port(details)
+        self._agent.process_added_port(port_details)
 
         if isinstance(side_effect, os_win_exc.HyperVvNicNotFound):
             self.assertNotIn(mock.sentinel.device, self._agent._added_ports)
         else:
             self.assertIn(mock.sentinel.device, self._agent._added_ports)
+
+        mock_treat_vif_port.assert_called_once_with(set_port_sriov=False,
+                                                    **details)
 
     def test_treat_devices_added_returns_true_for_missing_device(self):
         self._agent._added_ports = set([mock.sentinel.port_id])
