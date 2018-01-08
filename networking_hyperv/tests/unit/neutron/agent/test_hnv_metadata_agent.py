@@ -116,7 +116,7 @@ class TestMetadataProxyHandler(test_base.BaseTestCase):
     def _test_proxy_request(self, mock_get_headers, mock_http,
                             valid_path=True, valid_profile_id=True,
                             response_code=200, method='GET'):
-        nova_url = '%s:%s' % (CONF.nova_metadata_ip,
+        nova_url = '%s:%s' % (CONF.nova_metadata_host,
                               CONF.nova_metadata_port)
         path = "/9d0bab3e-1abf-11e7-a7ef-5cc5d4a321db" if valid_path else "/"
         headers = {"X-Not-Empty": True} if valid_profile_id else {}
@@ -231,12 +231,12 @@ class TestMetadataProxy(test_base.HyperVBaseTestCase):
     def test_get_agent_configurations(self):
         fake_ip = '10.10.10.10'
         fake_port = 9999
-        self.config(nova_metadata_ip=fake_ip,
+        self.config(nova_metadata_host=fake_ip,
                     nova_metadata_port=fake_port)
 
         configuration = self._agent._get_agent_configurations()
 
-        self.assertEqual(fake_ip, configuration["nova_metadata_ip"])
+        self.assertEqual(fake_ip, configuration["nova_metadata_host"])
         self.assertEqual(fake_port, configuration["nova_metadata_port"])
         self.assertEqual(CONF.AGENT.log_agent_heartbeats,
                          configuration["log_agent_heartbeats"])
