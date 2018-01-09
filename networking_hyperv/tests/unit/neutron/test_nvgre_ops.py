@@ -29,6 +29,10 @@ CONF = config.CONF
 
 class TestHyperVNvgreOps(base.HyperVBaseTestCase):
 
+    _autospec_classes = [
+        nvgre_ops.neutron_client.NeutronAPIClient,
+    ]
+
     FAKE_MAC_ADDR = 'fa:ke:ma:ca:dd:re:ss'
     FAKE_CIDR = '10.0.0.0/24'
     FAKE_VSWITCH_NAME = 'fake_vswitch'
@@ -41,11 +45,11 @@ class TestHyperVNvgreOps(base.HyperVBaseTestCase):
         self.ops._vswitch_ips[mock.sentinel.network_name] = (
             mock.sentinel.ip_addr)
         self.ops.context = self.context
-        self.ops._notifier = mock.MagicMock()
-        self.ops._hyperv_utils = mock.MagicMock()
-        self.ops._nvgre_utils = mock.MagicMock()
-        self.ops._n_client = mock.MagicMock()
-        self.ops._db = mock.MagicMock()
+        self.ops._notifier = mock.MagicMock(
+            autospec=nvgre_ops.hyperv_agent_notifier.AgentNotifierApi)
+        self.ops._hyperv_utils = mock.MagicMock(
+            autospec=self.ops._hyperv_utils)
+        self.ops._nvgre_utils = mock.MagicMock(autospec=self.ops._nvgre_utils)
 
     @mock.patch.object(nvgre_ops.hyperv_agent_notifier, 'AgentNotifierApi')
     def test_init_notifier(self, mock_notifier):
@@ -227,6 +231,7 @@ class TestHyperVNvgreOps(base.HyperVBaseTestCase):
 
     @mock.patch.object(nvgre_ops.HyperVNvgreOps, '_register_lookup_record')
     def test_refresh_nvgre_records(self, mock_register_record):
+        self.ops._n_client.get_tunneling_agents.return_value = {}
         self.ops._nvgre_ports.append(mock.sentinel.processed_port_id)
         self.ops._tunneling_agents[mock.sentinel.host_id] = (
             mock.sentinel.agent_ip)
@@ -262,6 +267,7 @@ class TestHyperVNvgreOps(base.HyperVBaseTestCase):
 
     @mock.patch.object(nvgre_ops.HyperVNvgreOps, '_register_lookup_record')
     def test_refresh_nvgre_records_exception(self, mock_register_record):
+        self.ops._n_client.get_tunneling_agents.return_value = {}
         self.ops._tunneling_agents[mock.sentinel.host_id] = (
             mock.sentinel.agent_ip)
         self.ops._network_vsids[mock.sentinel.net_id] = (mock.sentinel.vsid)

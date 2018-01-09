@@ -109,12 +109,12 @@ class Layer2Agent(base_agent.BaseAgent):
             [topics.PORT, topics.DELETE]
         ])
 
-        self.connection = agent_rpc.create_consumers(
+        self._connection = agent_rpc.create_consumers(
             self._endpoints, self._topic, self._consumers,
             start_listening=False
         )
         self._setup_qos_extension()
-        self.connection.consume_in_threads()
+        self._connection.consume_in_threads()
 
         report_interval = CONF.AGENT.report_interval
         if report_interval:

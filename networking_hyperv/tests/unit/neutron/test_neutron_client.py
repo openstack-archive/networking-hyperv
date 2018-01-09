@@ -29,6 +29,10 @@ CONF = config.CONF
 
 class TestNeutronClient(base.BaseTestCase):
 
+    _autospec_classes = [
+        neutron_client.clientv20.Client,
+    ]
+
     _FAKE_CIDR = '10.0.0.0/24'
     _FAKE_GATEWAY = '10.0.0.1'
     _FAKE_HOST = 'fake_host'
@@ -36,7 +40,6 @@ class TestNeutronClient(base.BaseTestCase):
     def setUp(self):
         super(TestNeutronClient, self).setUp()
         self._neutron = neutron_client.NeutronAPIClient()
-        self._neutron._client = mock.MagicMock()
 
     @mock.patch.object(neutron_client.clientv20, "Client")
     @mock.patch.object(neutron_client, "ks_loading")

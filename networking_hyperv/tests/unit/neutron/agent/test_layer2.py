@@ -66,21 +66,16 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
 
         self._agent = self._get_agent()
 
-        self._agent._qos_ext = mock.MagicMock()
-        self._agent._plugin_rpc = mock.Mock()
-        self._agent._metricsutils = mock.MagicMock()
-        self._agent._utils = mock.MagicMock()
-        self._agent._context = mock.Mock()
-        self._agent._client = mock.MagicMock()
-        self._agent._connection = mock.MagicMock()
-        self._agent._agent_id = mock.Mock()
-        self._agent._utils = mock.MagicMock()
-        self._agent._nvgre_ops = mock.MagicMock()
-        self._agent._vlan_driver = mock.MagicMock()
-        self._agent._physical_network_mappings = collections.OrderedDict()
-        self._agent._config = mock.MagicMock()
+        self._agent._utils = mock.MagicMock(
+            autospec=self._agent._utils)
+        self._agent._plugin_rpc = mock.Mock(
+            autospec=agent_base.agent_rpc.PluginApi)
         self._agent._endpoints = mock.MagicMock()
-        self._agent._event_callback_pairs = mock.MagicMock()
+        self._agent._client = mock.MagicMock(
+            autospec=agent_base.n_rpc.BackingOffClient)
+        self._agent._connection = mock.MagicMock(
+            autospec=agent_base.n_rpc.Connection)
+        self._agent._physical_network_mappings = collections.OrderedDict()
         self._agent._network_vswitch_map = {}
 
     def _get_fake_port_details(self):

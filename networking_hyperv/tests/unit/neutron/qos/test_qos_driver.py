@@ -30,7 +30,8 @@ class TestQosHyperVAgentDriver(base.BaseTestCase):
     def setUp(self):
         super(TestQosHyperVAgentDriver, self).setUp()
         self.driver = qos_driver.QosHyperVAgentDriver()
-        self.driver._utils = mock.Mock()
+        self.driver.initialize()
+        self.driver._utils = mock.Mock(autospec=self.driver._utils)
 
     @mock.patch.object(qos_driver, 'networkutils')
     def test_initialize(self, mock_networkutils):

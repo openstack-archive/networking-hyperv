@@ -31,8 +31,10 @@ from networking_hyperv.tests import base
 
 class TestHyperVTrunkDriver(base.HyperVBaseTestCase):
 
-    @mock.patch.object(trunk_driver.trunk_rpc, 'TrunkStub',
-                       lambda *args, **kwargs: None)
+    _autospec_classes = [
+        trunk_driver.trunk_rpc.TrunkStub,
+    ]
+
     @mock.patch.object(trunk_driver.trunk_rpc.TrunkSkeleton, '__init__',
                        lambda *args, **kwargs: None)
     def setUp(self):
@@ -40,8 +42,8 @@ class TestHyperVTrunkDriver(base.HyperVBaseTestCase):
 
         self.trunk_driver = trunk_driver.HyperVTrunkDriver(
             mock.sentinel.context)
-        self.trunk_driver._utils = mock.MagicMock()
-        self.trunk_driver._trunk_rpc = mock.MagicMock()
+        self.trunk_driver._utils = mock.MagicMock(
+            autospec=self.trunk_driver._utils)
 
     def test_handle_trunks_deleted(self):
         mock_trunk = mock.MagicMock()

@@ -18,6 +18,7 @@ Unit tests for Neutron base agent.
 """
 
 import mock
+from neutron.agent import rpc as agent_rpc
 
 from networking_hyperv.neutron.agent import base as agent_base
 from networking_hyperv.tests import base as test_base
@@ -44,13 +45,8 @@ class TestBaseAgent(test_base.HyperVBaseTestCase):
 
         self._agent._agent_id = mock.sentinel.agent_id
         self._agent._context = mock.sentinel.admin_context
-        self._agent._utils = mock.MagicMock()
-
-        self._agent._client = mock.MagicMock()
-        self._agent._plugin_rpc = mock.Mock()
-        self._agent._connection = mock.MagicMock()
-
-        self._agent._state_rpc = mock.MagicMock()
+        self._agent._state_rpc = mock.MagicMock(
+            autospec=agent_rpc.PluginReportStateAPI)
 
     def test_set_agent_state(self):
         self._agent._agent_state = {}

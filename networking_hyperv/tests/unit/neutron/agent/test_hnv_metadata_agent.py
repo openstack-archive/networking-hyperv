@@ -30,15 +30,14 @@ CONF = cfg.CONF
 
 class TestMetadataProxyHandler(test_base.BaseTestCase):
 
-    @mock.patch("networking_hyperv.neutron.neutron_client.NeutronAPIClient")
-    @mock.patch("neutron_lib.context.get_admin_context_without_session")
-    def _get_proxy(self, mock_get_context, mock_neutron_client):
-        return hnv_metadata_agent._MetadataProxyHandler()
+    _autospec_classes = [
+        hnv_metadata_agent.neutron_client.NeutronAPIClient,
+    ]
 
     def setUp(self):
         super(TestMetadataProxyHandler, self).setUp()
         hnv_metadata_agent.register_config_opts()
-        self._proxy = self._get_proxy()
+        self._proxy = hnv_metadata_agent._MetadataProxyHandler()
         self._neutron_client = self._proxy._neutron_client
 
     @mock.patch.object(hnv_metadata_agent._MetadataProxyHandler,

@@ -28,6 +28,10 @@ from networking_hyperv.tests import base as test_base
 
 class TestHNVAgent(test_base.HyperVBaseTestCase):
 
+    _autospec_classes = [
+        hnv_agent.neutron_client.NeutronAPIClient,
+    ]
+
     @mock.patch.object(hnv_agent.HNVAgent, "_setup")
     @mock.patch.object(hnv_agent.HNVAgent, "_setup_rpc")
     @mock.patch.object(hnv_agent.HNVAgent, "_set_agent_state")
@@ -38,7 +42,7 @@ class TestHNVAgent(test_base.HyperVBaseTestCase):
         super(TestHNVAgent, self).setUp()
 
         self.agent = self._get_agent()
-        self.agent._neutron_client = mock.Mock()
+        self.agent._utils = mock.Mock(autospec=self.agent._utils)
 
     def test_get_agent_configurations(self):
         self.config(logical_network=mock.sentinel.logical_network,
@@ -88,7 +92,8 @@ class TestHNVAgent(test_base.HyperVBaseTestCase):
         mock_super_port_bound.assert_called_once_with(
             mock.sentinel.port_id, mock.sentinel.network_id,
             mock.sentinel.network_type, mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id, mock.sentinel.set_port_sriov)
+            mock.sentinel.segmentation_id, mock.sentinel.port_security_enabled,
+            mock.sentinel.set_port_sriov)
         mock_neutron_client = self.agent._neutron_client
         mock_neutron_client.get_port_profile_id.assert_called_once_with(
             mock.sentinel.port_id)
