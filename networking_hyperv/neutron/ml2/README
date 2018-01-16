@@ -3,7 +3,7 @@ Hyper-V Neutron Agent and ML2 Mechanism Driver for ML2 Plugin
 
 This mechanism driver is used by ``neutron-server`` in order to bind neutron
 ports to Hyper-V hosts. In order to use it, ``neutron-server`` must use the
-Ml2Plugin as a ``core_plugin``. The service's configration file
+Ml2Plugin as a ``core_plugin``. The service's configuration file
 (``/etc/neutron/neutron.conf``), must contain this following line:
 
 ::
