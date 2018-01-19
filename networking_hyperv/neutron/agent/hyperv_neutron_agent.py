@@ -209,6 +209,13 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
             self._utils.add_metrics_collection_acls(port_id)
             self._port_metric_retries[port_id] = self._metrics_max_retries
 
+        # check if security groups is enabled.
+        # if not, teardown the security group rules
+        if self._enable_security_groups:
+            self._sec_groups_agent.refresh_firewall([port_id])
+        else:
+            self._utils.remove_all_security_rules(port_id)
+
         self._utils.set_vswitch_port_mac_spoofing(port_id,
                                                   port_security_enabled)
 
@@ -236,24 +243,9 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
                             "metrics.", port_id)
                 del self._port_metric_retries[port_id]
 
-    @_port_synchronized
-    def _treat_vif_port(self, port_id, network_id, network_type,
-                        physical_network, segmentation_id,
-                        admin_state_up, port_security_enabled,
-                        set_port_sriov=False):
-        if admin_state_up:
-            self._port_bound(port_id, network_id, network_type,
-                             physical_network, segmentation_id,
-                             port_security_enabled, set_port_sriov)
-            # check if security groups is enabled.
-            # if not, teardown the security group rules
-            if self._enable_security_groups:
-                self._sec_groups_agent.refresh_firewall([port_id])
-            else:
-                self._utils.remove_all_security_rules(port_id)
-        else:
-            self._port_unbound(port_id)
-            self._sec_groups_agent.remove_devices_filter([port_id])
+    def _port_unbound(self, port_id, vnic_deleted=False):
+        super(HyperVNeutronAgent, self)._port_unbound(port_id, vnic_deleted)
+        self._sec_groups_agent.remove_devices_filter([port_id])
 
     def _process_added_port(self, device_details):
         super(HyperVNeutronAgent, self)._process_added_port(

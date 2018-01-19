@@ -20,6 +20,7 @@ Unit tests for Windows Hyper-V virtual switch neutron driver
 
 import sys
 
+import ddt
 import mock
 from neutron.common import topics
 from os_win import exceptions
@@ -232,76 +233,54 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
             constants.TYPE_LOCAL,
             mock.sentinel.FAKE_PHYSICAL_NETWORK)
 
+    @ddt.data({'enable_security_groups': True},
+              {'network_type': constants.TYPE_LOCAL},
+              {'network_type': constants.TYPE_VLAN},
+              {'network_type': constants.TYPE_NVGRE})
+    @ddt.unpack
     @mock.patch.object(layer2.Layer2Agent, '_port_bound')
-    def _test_port_bound(self, enable_metrics, mock_super_bound):
+    def test_port_bound(self, mock_super_bound,
+                        network_type=constants.TYPE_FLAT,
+                        enable_security_groups=False):
         net_uuid = 'my-net-uuid'
-        port = mock.MagicMock()
-
-        self.agent._enable_metrics_collection = enable_metrics
+        self.agent._enable_metrics_collection = True
+        self.agent._enable_security_groups = enable_security_groups
         self.agent._network_vswitch_map[net_uuid] = mock.sentinel.vswitch_name
 
-        self.agent._port_bound(port, net_uuid,
-                               'vlan',
+        self.agent._port_bound(mock.sentinel.port_id, net_uuid,
+                               network_type,
                                mock.sentinel.physical_network,
                                mock.sentinel.segmentation_id,
                                mock.sentinel.port_security_enabled,
                                False)
 
         mock_super_bound.assert_called_once_with(
-            port, net_uuid, 'vlan',
+            mock.sentinel.port_id, net_uuid, network_type,
             mock.sentinel.physical_network,
             mock.sentinel.segmentation_id, mock.sentinel.port_security_enabled,
             False)
-        self.assertEqual(enable_metrics,
-                         self.agent._utils.add_metrics_collection_acls.called)
 
-    def test_port_bound_enable_metrics(self):
-        self._test_port_bound(True)
+        if network_type == constants.TYPE_VLAN:
+            self.agent._vlan_driver.bind_vlan_port.assert_called_once_with(
+                mock.sentinel.port_id, mock.sentinel.segmentation_id)
+        elif network_type == constants.TYPE_NVGRE:
+            self.agent._nvgre_ops.bind_nvgre_port.assert_called_once_with(
+                mock.sentinel.segmentation_id, mock.sentinel.vswitch_name,
+                mock.sentinel.port_id)
 
-    def test_port_bound_no_metrics(self):
-        self._test_port_bound(False)
-
-    @mock.patch.object(hyperv_agent.HyperVNeutronAgent,
-                       '_provision_network')
-    def _check_port_bound_net_type(self, mock_provision_network, network_type):
-        net_uuid = 'my-net-uuid'
-        fake_map = {'vswitch_name': mock.sentinel.vswitch_name,
-                    'ports': []}
-
-        def fake_prov_network(*args, **kwargs):
-            self.agent._network_vswitch_map[net_uuid] = fake_map
-
-        mock_provision_network.side_effect = fake_prov_network
-
-        self.agent._port_bound(mock.sentinel.port_id, net_uuid, network_type,
-                               mock.sentinel.physical_network,
-                               mock.sentinel.segmentation_id,
-                               mock.sentinel.port_security_enabled,
-                               mock.sentinel.set_port_sriov)
-
-        self.assertIn(mock.sentinel.port_id, fake_map['ports'])
-        mock_provision_network.assert_called_once_with(
-            mock.sentinel.port_id, net_uuid, network_type,
-            mock.sentinel.physical_network, mock.sentinel.segmentation_id)
-        self.agent._utils.connect_vnic_to_vswitch.assert_called_once_with(
-            vswitch_name=mock.sentinel.vswitch_name,
-            switch_port_name=mock.sentinel.port_id)
-        self.agent._utils.set_vswitch_port_mac_spoofing(
-            mock.sentinel.port_id, mock.sentinel.port_security_enabled)
-
-    def test_port_bound_vlan(self):
-        self._check_port_bound_net_type(network_type=constants.TYPE_VLAN)
-
-        self.agent._vlan_driver.bind_vlan_port.assert_called_once_with(
-            mock.sentinel.port_id, mock.sentinel.segmentation_id)
-
-    def test_port_bound_nvgre(self):
-        self.agent._nvgre_enabled = True
-        self._check_port_bound_net_type(network_type=constants.TYPE_NVGRE)
-
-        self.agent._nvgre_ops.bind_nvgre_port.assert_called_once_with(
-            mock.sentinel.segmentation_id, mock.sentinel.vswitch_name,
+        self.agent._utils.add_metrics_collection_acls.assert_called_once_with(
             mock.sentinel.port_id)
+
+        if enable_security_groups:
+            refresh_firewall = self.agent._sec_groups_agent.refresh_firewall
+            refresh_firewall.assert_called_once_with([mock.sentinel.port_id])
+        else:
+            remove_sec_rules = self.agent._utils.remove_all_security_rules
+            remove_sec_rules.assert_called_once_with(mock.sentinel.port_id)
+
+        set_mac_spoofing = self.agent._utils.set_vswitch_port_mac_spoofing
+        set_mac_spoofing.assert_called_once_with(
+            mock.sentinel.port_id, mock.sentinel.port_security_enabled)
 
     def test_port_enable_control_metrics_ok(self):
         self.agent._enable_metrics_collection = True
@@ -338,62 +317,15 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
         self.agent._port_enable_control_metrics()
         self.assertNotIn(self._FAKE_PORT_ID, self.agent._port_metric_retries)
 
-    @mock.patch.object(hyperv_agent.HyperVNeutronAgent,
-                       '_port_unbound')
-    def test_vif_port_state_down(self, mock_port_unbound):
-        self.agent._treat_vif_port(
-            mock.sentinel.port_id, mock.sentinel.network_id,
-            mock.sentinel.network_type, mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id, False,
-            mock.sentinel.port_security_enabled)
+    @mock.patch.object(layer2.Layer2Agent, '_port_unbound')
+    def test_port_unbound(self, mock_super_unbound):
+        self.agent._port_unbound(mock.sentinel.port_id,
+                                 mock.sentinel.vnic_deleted)
 
-        mock_port_unbound.assert_called_once_with(mock.sentinel.port_id)
-        sg_agent = self.agent._sec_groups_agent
-        sg_agent.remove_devices_filter.assert_called_once_with(
-            [mock.sentinel.port_id])
-
-    @mock.patch.object(hyperv_agent.HyperVNeutronAgent,
-                       '_port_bound')
-    def _check_treat_vif_port_state_up(self, mock_port_bound):
-        self.agent._treat_vif_port(
-            mock.sentinel.port_id, mock.sentinel.network_id,
-            mock.sentinel.network_type, mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id, True,
-            mock.sentinel.port_security_enabled)
-
-        mock_port_bound.assert_called_once_with(
-            mock.sentinel.port_id, mock.sentinel.network_id,
-            mock.sentinel.network_type, mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id, mock.sentinel.port_security_enabled,
-            False)
-
-    def test_treat_vif_port_sg_enabled(self):
-        self.agent._enable_security_groups = True
-
-        self._check_treat_vif_port_state_up()
-
-        sg_agent = self.agent._sec_groups_agent
-        sg_agent.refresh_firewall.assert_called_once_with(
-            [mock.sentinel.port_id])
-
-    def test_treat_vif_port_sg_disabled(self):
-        self.agent._enable_security_groups = False
-
-        self._check_treat_vif_port_state_up()
-
-        self.agent._utils.remove_all_security_rules.assert_called_once_with(
-            mock.sentinel.port_id)
-
-    def _get_fake_port_details(self):
-        return {
-            'device': mock.sentinel.device,
-            'port_id': mock.sentinel.port_id,
-            'network_id': mock.sentinel.network_id,
-            'network_type': mock.sentinel.network_type,
-            'physical_network': mock.sentinel.physical_network,
-            'segmentation_id': mock.sentinel.segmentation_id,
-            'admin_state_up': mock.sentinel.admin_state_up
-        }
+        mock_super_unbound.assert_called_once_with(
+            mock.sentinel.port_id, mock.sentinel.vnic_deleted)
+        remove_dev_filter = self.agent._sec_groups_agent.remove_devices_filter
+        remove_dev_filter.assert_called_once_with([mock.sentinel.port_id])
 
     @mock.patch.object(layer2.Layer2Agent, "_process_added_port")
     def test_process_added_port(self, mock_process):

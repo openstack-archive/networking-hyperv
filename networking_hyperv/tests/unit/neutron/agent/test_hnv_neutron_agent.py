@@ -103,30 +103,6 @@ class TestHNVAgent(test_base.HyperVBaseTestCase):
             vendor_id=constants.VENDOR_ID,
             vendor_name=constants.VENDOR_NAME)
 
-    @mock.patch.object(hnv_agent.HNVAgent, '_port_bound')
-    def test_treat_vif_port_state_up(self, mock_port_bound):
-        self.agent._treat_vif_port(
-            mock.sentinel.port_id, mock.sentinel.network_id,
-            mock.sentinel.network_type, mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id, True,
-            mock.sentinel.port_security_enabled)
-
-        mock_port_bound.assert_called_once_with(
-            mock.sentinel.port_id, mock.sentinel.network_id,
-            mock.sentinel.network_type, mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id, mock.sentinel.port_security_enabled,
-            False)
-
-    @mock.patch.object(hnv_agent.HNVAgent, '_port_unbound')
-    def test_treat_vif_port_state_down(self, mock_port_unbound):
-        self.agent._treat_vif_port(
-            mock.sentinel.port_id, mock.sentinel.network_id,
-            mock.sentinel.network_type, mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id, False,
-            mock.sentinel.port_security_enabled)
-
-        mock_port_unbound.assert_called_once_with(mock.sentinel.port_id)
-
 
 class TestMain(test_base.BaseTestCase):
 

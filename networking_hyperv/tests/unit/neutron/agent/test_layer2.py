@@ -48,11 +48,6 @@ class _Layer2Agent(agent_base.Layer2Agent):
                            physical_network, segmentation_id):
         pass
 
-    def _treat_vif_port(self, port_id, network_id, network_type,
-                        physical_network, segmentation_id,
-                        admin_state_up, port_security_enabled):
-        pass
-
 
 @ddt.ddt
 class TestLayer2Agent(test_base.HyperVBaseTestCase):
@@ -632,7 +627,8 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         port = {'id': mock.sentinel.port_id}
         self._agent.port_update(self._agent._context, port)
 
-    def test_port_update(self):
+    @mock.patch.object(agent_base.Layer2Agent, '_treat_vif_port')
+    def test_port_update(self, mock_treat_vif_port):
         self._agent._utils.vnic_port_exists.return_value = True
         port = {'id': mock.sentinel.port_id,
                 'network_id': mock.sentinel.network_id,
@@ -660,3 +656,27 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
     def test_network_delete_not_defined(self, mock_reclaim_local_network):
         self._agent.network_delete(mock.sentinel.context, mock.sentinel.net_id)
         self.assertFalse(mock_reclaim_local_network.called)
+
+    @mock.patch.object(agent_base.Layer2Agent, '_port_bound')
+    def test_treat_vif_port_state_up(self, mock_port_bound):
+        self._agent._treat_vif_port(
+            mock.sentinel.port_id, mock.sentinel.network_id,
+            mock.sentinel.network_type, mock.sentinel.physical_network,
+            mock.sentinel.segmentation_id, True,
+            mock.sentinel.port_security_enabled)
+
+        mock_port_bound.assert_called_once_with(
+            mock.sentinel.port_id, mock.sentinel.network_id,
+            mock.sentinel.network_type, mock.sentinel.physical_network,
+            mock.sentinel.segmentation_id, mock.sentinel.port_security_enabled,
+            False)
+
+    @mock.patch.object(agent_base.Layer2Agent, '_port_unbound')
+    def test_treat_vif_port_state_down(self, mock_port_unbound):
+        self._agent._treat_vif_port(
+            mock.sentinel.port_id, mock.sentinel.network_id,
+            mock.sentinel.network_type, mock.sentinel.physical_network,
+            mock.sentinel.segmentation_id, False,
+            mock.sentinel.port_security_enabled)
+
+        mock_port_unbound.assert_called_once_with(mock.sentinel.port_id)
