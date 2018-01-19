@@ -247,7 +247,7 @@ class Layer2Agent(base_agent.BaseAgent):
         del self._network_vswitch_map[net_uuid]
 
     def _port_bound(self, port_id, network_id, network_type, physical_network,
-                    segmentation_id, set_port_sriov):
+                    segmentation_id, port_security_enabled, set_port_sriov):
         """Bind the port to the recived network."""
         LOG.debug("Binding port %s", port_id)
 
@@ -296,6 +296,7 @@ class Layer2Agent(base_agent.BaseAgent):
             physical_network=device_details['physical_network'],
             segmentation_id=device_details['segmentation_id'],
             admin_state_up=device_details['admin_state_up'],
+            port_security_enabled=device_details['port_security_enabled'],
             set_port_sriov=set_port_sriov)
 
     def process_added_port(self, device_details):
@@ -439,6 +440,7 @@ class Layer2Agent(base_agent.BaseAgent):
                 physical_network=physical_network,
                 segmentation_id=segmentation_id,
                 admin_state_up=port['admin_state_up'],
+                port_security_enabled=port['port_security_enabled'],
             )
         else:
             LOG.debug("No port %s defined on agent.", port['id'])
@@ -466,5 +468,6 @@ class Layer2Agent(base_agent.BaseAgent):
     @abc.abstractmethod
     def _treat_vif_port(self, port_id, network_id, network_type,
                         physical_network, segmentation_id,
-                        admin_state_up, set_port_sriov=False):
+                        admin_state_up, port_security_enabled,
+                        set_port_sriov=False):
         pass
