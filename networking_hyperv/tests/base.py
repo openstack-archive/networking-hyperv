@@ -27,6 +27,7 @@ import fixtures
 import mock
 from os_win import utilsfactory
 from oslo_utils import strutils
+from oslotest import mock_fixture
 import testtools
 
 from networking_hyperv.neutron import config
@@ -34,6 +35,8 @@ from networking_hyperv.neutron import config
 CONF = config.CONF
 
 LOG_FORMAT = "%(asctime)s %(levelname)8s [%(name)s] %(message)s"
+
+mock_fixture.patch_mock_module()
 
 
 def bool_from_env(key, strict=False, default=False):
@@ -43,8 +46,12 @@ def bool_from_env(key, strict=False, default=False):
 
 class BaseTestCase(testtools.TestCase):
 
+    _autospec_classes = []
+
     def setUp(self):
         super(BaseTestCase, self).setUp()
+        self.useFixture(mock_fixture.MockAutospecFixture())
+        self._patch_autospec_classes()
 
         self.addCleanup(CONF.reset)
         self.addCleanup(mock.patch.stopall)
@@ -77,6 +84,14 @@ class BaseTestCase(testtools.TestCase):
             self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
 
         self.addOnException(self.check_for_systemexit)
+
+    def _patch_autospec_classes(self):
+        for class_type in self._autospec_classes:
+            mocked_class = mock.Mock(autospec=class_type)
+            patcher = mock.patch(
+                '.'.join([class_type.__module__, class_type.__name__]),
+                mocked_class)
+            patcher.start()
 
     def check_for_systemexit(self, exc_info):
         if isinstance(exc_info[1], SystemExit):

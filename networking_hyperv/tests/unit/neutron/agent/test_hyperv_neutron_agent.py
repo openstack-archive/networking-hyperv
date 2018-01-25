@@ -22,6 +22,8 @@ import sys
 
 import ddt
 import mock
+from neutron.agent import rpc as agent_rpc
+from neutron.common import rpc as n_rpc
 from neutron.common import topics
 from os_win import exceptions
 
@@ -69,18 +71,22 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
         super(TestHyperVNeutronAgent, self).setUp()
         self.agent = self._get_agent()
 
-        self.agent._qos_ext = mock.MagicMock()
-        self.agent._plugin_rpc = mock.Mock()
-        self.agent._metricsutils = mock.MagicMock()
-        self.agent._utils = mock.MagicMock()
-        self.agent._sec_groups_agent = mock.MagicMock()
-        self.agent._context = mock.Mock()
-        self.agent._client = mock.MagicMock()
-        self.agent._connection = mock.MagicMock()
-        self.agent._agent_id = mock.Mock()
-        self.agent._utils = mock.MagicMock()
-        self.agent._nvgre_ops = mock.MagicMock()
-        self.agent._vlan_driver = mock.MagicMock()
+        self.agent._utils = mock.MagicMock(autospec=self.agent._utils)
+        self.agent._metricsutils = mock.MagicMock(
+            autospec=self.agent._metricsutils)
+        self.agent._nvgre_ops = mock.MagicMock(
+            autospec=hyperv_agent.nvgre_ops.HyperVNvgreOps)
+
+        self.agent._sec_groups_agent = mock.MagicMock(
+            autospec=hyperv_agent.HyperVSecurityAgent)
+        self.agent._vlan_driver = mock.MagicMock(
+            autospec=hyperv_agent.trunk_driver.HyperVTrunkDriver)
+        self.agent._qos_ext = mock.MagicMock(
+            autospec=hyperv_agent.qos_extension.QosAgentExtension)
+
+        self.agent._plugin_rpc = mock.MagicMock(autospec=agent_rpc.PluginApi)
+        self.agent._client = mock.MagicMock(autospec=n_rpc.BackingOffClient)
+        self.agent._connection = mock.MagicMock(autospec=n_rpc.Connection)
         self.agent._refresh_cache = False
         self.agent._added_ports = set()
 

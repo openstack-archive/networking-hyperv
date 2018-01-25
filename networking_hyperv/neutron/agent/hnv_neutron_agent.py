@@ -72,6 +72,7 @@ class HNVAgent(hyperv_base.Layer2Agent):
         """Bind the port to the recived network."""
         super(HNVAgent, self)._port_bound(port_id, network_id, network_type,
                                           physical_network, segmentation_id,
+                                          port_security_enabled,
                                           set_port_sriov)
         LOG.debug("Getting the profile id for the current port.")
         profile_id = self._neutron_client.get_port_profile_id(port_id)

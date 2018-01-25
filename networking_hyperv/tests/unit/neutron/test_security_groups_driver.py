@@ -60,6 +60,10 @@ class SecurityGroupRuleTestHelper(base.HyperVBaseTestCase):
 
 class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
 
+    _autospec_classes = [
+        sg_driver.SecurityGroupRuleGeneratorR2,
+    ]
+
     _FAKE_DEVICE = 'fake_device'
     _FAKE_ID = 'fake_id'
     _FAKE_PARAM_NAME = 'fake_param_name'
@@ -69,8 +73,7 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         super(TestHyperVSecurityGroupsDriver, self).setUp()
 
         self._driver = sg_driver.HyperVSecurityGroupsDriver()
-        self._driver._utils = mock.MagicMock()
-        self._driver._sg_gen = mock.MagicMock()
+        self._driver._utils = mock.MagicMock(autospec=self._driver._utils)
 
     def test__select_sg_rules_for_port(self):
         mock_port = self._get_port()
@@ -194,6 +197,7 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
             return_value=self._FAKE_SOURCE_IP_PREFIX)
 
         mock_gen_rules.return_value = {new_mock_port['id']: [fake_rule_new]}
+        self._driver._sg_gen.expand_wildcard_rules.return_value = []
 
         self._driver._security_ports[mock_port['device']] = mock_port
         self._driver._sec_group_rules[new_mock_port['id']] = []
