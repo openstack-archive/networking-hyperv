@@ -82,7 +82,8 @@ class TestHNVAgent(test_base.HyperVBaseTestCase):
         self.agent._port_bound(
             mock.sentinel.port_id, mock.sentinel.network_id,
             mock.sentinel.network_type, mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id, mock.sentinel.set_port_sriov)
+            mock.sentinel.segmentation_id, mock.sentinel.port_security_enabled,
+            mock.sentinel.set_port_sriov)
 
         mock_super_port_bound.assert_called_once_with(
             mock.sentinel.port_id, mock.sentinel.network_id,
@@ -107,19 +108,22 @@ class TestHNVAgent(test_base.HyperVBaseTestCase):
         self.agent._treat_vif_port(
             mock.sentinel.port_id, mock.sentinel.network_id,
             mock.sentinel.network_type, mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id, True)
+            mock.sentinel.segmentation_id, True,
+            mock.sentinel.port_security_enabled)
 
         mock_port_bound.assert_called_once_with(
             mock.sentinel.port_id, mock.sentinel.network_id,
             mock.sentinel.network_type, mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id, False)
+            mock.sentinel.segmentation_id, mock.sentinel.port_security_enabled,
+            False)
 
     @mock.patch.object(hnv_agent.HNVAgent, '_port_unbound')
     def test_treat_vif_port_state_down(self, mock_port_unbound):
         self.agent._treat_vif_port(
             mock.sentinel.port_id, mock.sentinel.network_id,
             mock.sentinel.network_type, mock.sentinel.physical_network,
-            mock.sentinel.segmentation_id, False)
+            mock.sentinel.segmentation_id, False,
+            mock.sentinel.port_security_enabled)
 
         mock_port_unbound.assert_called_once_with(mock.sentinel.port_id)
 

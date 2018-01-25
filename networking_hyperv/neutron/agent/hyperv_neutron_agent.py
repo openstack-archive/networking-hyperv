@@ -185,11 +185,11 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
         self._network_vswitch_map[net_uuid] = vswitch_map
 
     def _port_bound(self, port_id, network_id, network_type, physical_network,
-                    segmentation_id, set_port_sriov):
+                    segmentation_id, port_security_enabled, set_port_sriov):
         """Bind the port to the recived network."""
         super(HyperVNeutronAgent, self)._port_bound(
             port_id, network_id, network_type, physical_network,
-            segmentation_id, set_port_sriov
+            segmentation_id, port_security_enabled, set_port_sriov
         )
         vswitch_map = self._network_vswitch_map[network_id]
 
@@ -208,6 +208,9 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
         if self._enable_metrics_collection:
             self._utils.add_metrics_collection_acls(port_id)
             self._port_metric_retries[port_id] = self._metrics_max_retries
+
+        self._utils.set_vswitch_port_mac_spoofing(port_id,
+                                                  port_security_enabled)
 
     def _port_enable_control_metrics(self):
         if not self._enable_metrics_collection:
@@ -236,10 +239,12 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
     @_port_synchronized
     def _treat_vif_port(self, port_id, network_id, network_type,
                         physical_network, segmentation_id,
-                        admin_state_up, set_port_sriov=False):
+                        admin_state_up, port_security_enabled,
+                        set_port_sriov=False):
         if admin_state_up:
             self._port_bound(port_id, network_id, network_type,
-                             physical_network, segmentation_id, set_port_sriov)
+                             physical_network, segmentation_id,
+                             port_security_enabled, set_port_sriov)
             # check if security groups is enabled.
             # if not, teardown the security group rules
             if self._enable_security_groups:

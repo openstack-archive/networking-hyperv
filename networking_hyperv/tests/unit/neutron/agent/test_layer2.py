@@ -50,7 +50,7 @@ class _Layer2Agent(agent_base.Layer2Agent):
 
     def _treat_vif_port(self, port_id, network_id, network_type,
                         physical_network, segmentation_id,
-                        admin_state_up):
+                        admin_state_up, port_security_enabled):
         pass
 
 
@@ -96,7 +96,8 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
             'network_type': mock.sentinel.network_type,
             'physical_network': mock.sentinel.physical_network,
             'segmentation_id': mock.sentinel.segmentation_id,
-            'admin_state_up': mock.sentinel.admin_state_up
+            'admin_state_up': mock.sentinel.admin_state_up,
+            'port_security_enabled': mock.sentinel.port_security_enabled,
         }
 
     @mock.patch.object(agent_base.Layer2Agent, '_process_removed_port_event',
@@ -430,7 +431,8 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         self._agent._port_bound(mock.sentinel.port_id,
                                 net_uuid, mock.sentinel.network_type,
                                 mock.sentinel.physical_network,
-                                mock.sentinel.segmentation_id, True)
+                                mock.sentinel.segmentation_id,
+                                mock.sentinel.port_security_enabled, True)
 
         self.assertIn(mock.sentinel.port_id, fake_map['ports'])
         mock_provision_network.assert_called_once_with(
@@ -634,7 +636,8 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         self._agent._utils.vnic_port_exists.return_value = True
         port = {'id': mock.sentinel.port_id,
                 'network_id': mock.sentinel.network_id,
-                'admin_state_up': mock.sentinel.admin_state_up}
+                'admin_state_up': mock.sentinel.admin_state_up,
+                'port_security_enabled': mock.sentinel.port_security_enabled}
 
         self._agent.port_update(self._agent._context, port,
                                 mock.sentinel.network_type,
