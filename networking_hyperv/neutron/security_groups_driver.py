@@ -17,6 +17,7 @@ import threading
 
 import netaddr
 from neutron.agent import firewall
+from neutron_lib import constants
 from os_win import exceptions
 from os_win.utils.network import networkutils
 from os_win import utilsfactory
@@ -28,10 +29,8 @@ from networking_hyperv.neutron import _common_utils as c_utils
 
 LOG = logging.getLogger(__name__)
 
-INGRESS_DIRECTION = 'ingress'
-EGRESS_DIRECTION = 'egress'
-DIRECTION_IP_PREFIX = {'ingress': 'source_ip_prefix',
-                       'egress': 'dest_ip_prefix'}
+DIRECTION_IP_PREFIX = {constants.INGRESS_DIRECTION: 'source_ip_prefix',
+                       constants.EGRESS_DIRECTION: 'dest_ip_prefix'}
 
 ACL_PROP_MAP = {
     'direction': {'ingress': networkutils.NetworkUtils._ACL_DIR_IN,
@@ -126,10 +125,10 @@ class HyperVSecurityGroupsDriverMixin(object):
         newports = {}
         for port in ports:
             _rules = []
-            _rules.extend(self._select_sg_rules_for_port(port,
-                                                         INGRESS_DIRECTION))
-            _rules.extend(self._select_sg_rules_for_port(port,
-                                                         EGRESS_DIRECTION))
+            _rules.extend(self._select_sg_rules_for_port(
+                port, constants.INGRESS_DIRECTION))
+            _rules.extend(self._select_sg_rules_for_port(
+                port, constants.EGRESS_DIRECTION))
             newports[port['id']] = _rules
         return newports
 
