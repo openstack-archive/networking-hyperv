@@ -33,6 +33,7 @@ from oslo_service import loopingcall
 import six
 
 from networking_hyperv.common.i18n import _, _LI, _LE    # noqa
+from networking_hyperv.neutron import _common_utils as c_util
 from networking_hyperv.neutron.agent import base as base_agent
 from networking_hyperv.neutron import config
 from networking_hyperv.neutron import constants
@@ -42,6 +43,7 @@ LOG = logging.getLogger(__name__)
 CONF = config.CONF
 
 _synchronized = lockutils.synchronized_with_prefix('n-hv-agent-')
+_port_synchronized = c_util.get_port_synchronized_decorator('n-hv-agent-')
 
 
 class Layer2Agent(base_agent.BaseAgent):
@@ -466,9 +468,14 @@ class Layer2Agent(base_agent.BaseAgent):
         """Provision the network with the received information."""
         pass
 
-    @abc.abstractmethod
+    @_port_synchronized
     def _treat_vif_port(self, port_id, network_id, network_type,
                         physical_network, segmentation_id,
                         admin_state_up, port_security_enabled,
                         set_port_sriov=False):
-        pass
+        if admin_state_up:
+            self._port_bound(port_id, network_id, network_type,
+                             physical_network, segmentation_id,
+                             port_security_enabled, set_port_sriov)
+        else:
+            self._port_unbound(port_id)

@@ -23,7 +23,6 @@ from neutron.conf.agent import common as neutron_config
 from oslo_log import log as logging
 
 from networking_hyperv.common.i18n import _LI    # noqa
-from networking_hyperv.neutron import _common_utils as c_util
 from networking_hyperv.neutron.agent import layer2 as hyperv_base
 from networking_hyperv.neutron import config
 from networking_hyperv.neutron import constants as h_const
@@ -31,8 +30,6 @@ from networking_hyperv.neutron import neutron_client
 
 LOG = logging.getLogger(__name__)
 CONF = config.CONF
-
-_port_synchronized = c_util.get_port_synchronized_decorator('n-hv-agent-')
 
 
 class HNVAgent(hyperv_base.Layer2Agent):
@@ -91,18 +88,6 @@ class HNVAgent(hyperv_base.Layer2Agent):
             cdn_label_string=h_const.CDN_LABEL_STRING,
             vendor_id=h_const.VENDOR_ID,
             vendor_name=h_const.VENDOR_NAME)
-
-    @_port_synchronized
-    def _treat_vif_port(self, port_id, network_id, network_type,
-                        physical_network, segmentation_id,
-                        admin_state_up, port_security_enabled,
-                        set_port_sriov=False):
-        if admin_state_up:
-            self._port_bound(port_id, network_id, network_type,
-                             physical_network, segmentation_id,
-                             port_security_enabled, set_port_sriov)
-        else:
-            self._port_unbound(port_id)
 
 
 def main():
