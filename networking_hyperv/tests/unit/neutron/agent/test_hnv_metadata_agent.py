@@ -236,7 +236,7 @@ class TestMetadataProxy(test_base.HyperVBaseTestCase):
 
         configuration = self._agent._get_agent_configurations()
 
-        self.assertEqual(fake_ip, configuration["nova_metadata_ip"])
+        self.assertEqual(fake_ip, configuration["nova_metadata_host"])
         self.assertEqual(fake_port, configuration["nova_metadata_port"])
         self.assertEqual(CONF.AGENT.log_agent_heartbeats,
                          configuration["log_agent_heartbeats"])

@@ -194,7 +194,7 @@ class MetadataProxy(base_agent.BaseAgent):
 
     def _get_agent_configurations(self):
         return {
-            'nova_metadata_ip': CONF.nova_metadata_host,
+            'nova_metadata_host': CONF.nova_metadata_host,
             'nova_metadata_port': CONF.nova_metadata_port,
             'log_agent_heartbeats': CONF.AGENT.log_agent_heartbeats,
         }
