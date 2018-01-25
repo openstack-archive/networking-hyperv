@@ -143,4 +143,4 @@ class HyperVTrunkDriver(trunk_rpc.TrunkSkeleton):
             vlan_id,
             port_id,
             operation_mode=op_mode,
-            vlan_trunk=vlan_trunk)
+            trunk_vlans=vlan_trunk)

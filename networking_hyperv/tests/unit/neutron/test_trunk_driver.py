@@ -143,7 +143,7 @@ class TestHyperVTrunkDriver(base.HyperVBaseTestCase):
         self.trunk_driver._utils.set_vswitch_port_vlan_id(
             mock.sentinel.vlan_id, mock.sentinel.port_id,
             operation_mode=operation_mode,
-            vlan_trunk=vlan_trunk)
+            trunk_vlans=vlan_trunk)
 
     def test_set_port_vlan_trunk_mode(self):
         self._check_set_port_vlan(mock.sentinel.vlan_trunk,
