@@ -615,6 +615,7 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
     def test_work(self, mock_spawn, mock_treat_dev_added,
                   mock_treat_dev_removed):
         self._agent._refresh_cache = True
+        self._agent._bound_ports = set([mock.sentinel.bound_port])
         self._agent._added_ports = set([mock.sentinel.bound_port])
         self._agent._removed_ports = set([mock.sentinel.unbound_port])
 
@@ -626,6 +627,17 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
             self._agent._notify_plugin_on_port_updates)
         mock_treat_dev_added.assert_called_once_with()
         mock_treat_dev_removed.assert_called_once_with()
+
+    @mock.patch.object(agent_base.Layer2Agent, '_treat_devices_removed')
+    @mock.patch.object(agent_base.Layer2Agent, '_treat_devices_added')
+    @mock.patch('eventlet.spawn_n')
+    def test_work_noop(self, mock_spawn, mock_treat_dev_added,
+                       mock_treat_dev_removed):
+        self._agent._work()
+
+        self.assertFalse(mock_spawn.called)
+        self.assertFalse(mock_treat_dev_added.called)
+        self.assertFalse(mock_treat_dev_removed.called)
 
     def test_port_update_not_found(self):
         self._agent._utils.vnic_port_exists.return_value = False

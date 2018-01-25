@@ -417,7 +417,8 @@ class Layer2Agent(base_agent.BaseAgent):
             self._utils.update_cache()
             self._refresh_cache = False
 
-        eventlet.spawn_n(self._notify_plugin_on_port_updates)
+        if self._bound_ports or self._unbound_ports:
+            eventlet.spawn_n(self._notify_plugin_on_port_updates)
 
         # notify plugin about port deltas
         if self._added_ports:
