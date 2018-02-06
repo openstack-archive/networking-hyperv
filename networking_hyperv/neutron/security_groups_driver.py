@@ -220,9 +220,8 @@ class HyperVSecurityGroupsDriverMixin(object):
             LOG.info('Port %s does not have security enabled. '
                      'Removing existing rules if any.', port['id'])
             self._security_ports.pop(port.get('device'), None)
-            existing_rules = self._sec_group_rules.pop(port['id'], None)
-            if existing_rules:
-                self._utils.remove_all_security_rules(port['id'])
+            self._sec_group_rules.pop(port['id'], None)
+            self._utils.remove_all_security_rules(port['id'])
             return
         LOG.info('Updating port rules.')
 
