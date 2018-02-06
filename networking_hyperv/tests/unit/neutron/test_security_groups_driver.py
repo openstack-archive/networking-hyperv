@@ -229,16 +229,6 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         self.assertNotIn(new_mock_port['device'], self._driver._security_ports)
         mock_method.assert_called_once_with(new_mock_port)
 
-    def test_update_port_filter_security_disabled(self):
-        mock_port = self._get_port()
-        mock_port['port_security_enabled'] = False
-
-        self._driver.update_port_filter(mock_port)
-
-        self.assertFalse(self._driver._utils.remove_all_security_rules.called)
-        self.assertNotIn(mock_port['device'], self._driver._security_ports)
-        self.assertNotIn(mock_port['id'], self._driver._sec_group_rules)
-
     def test_update_port_filter_security_disabled_existing_rules(self):
         mock_port = self._get_port()
         mock_port.pop('port_security_enabled')
