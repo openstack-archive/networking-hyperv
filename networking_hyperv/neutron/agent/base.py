@@ -19,7 +19,7 @@ import abc
 import threading
 import time
 
-from neutron.common import topics
+from neutron_lib.agent import topics
 from neutron_lib import context as neutron_context
 from os_win import utilsfactory
 from oslo_log import log as logging

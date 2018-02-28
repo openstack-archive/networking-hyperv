@@ -20,10 +20,10 @@ import sys
 import httplib2
 from neutron.agent import rpc as agent_rpc
 from neutron.common import config as common_config
-from neutron.common import topics
 from neutron.conf.agent import common as neutron_config
 from neutron.conf.agent.metadata import config as meta_config
 from neutron import wsgi
+from neutron_lib.agent import topics
 from neutron_lib import constants
 from neutron_lib import context
 from oslo_log import log as logging

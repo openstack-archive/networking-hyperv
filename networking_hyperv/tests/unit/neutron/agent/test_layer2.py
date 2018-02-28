@@ -22,8 +22,8 @@ import mock
 
 import ddt
 import neutron
-from neutron.common import topics
 from neutron.conf.agent import common as neutron_config
+from neutron_lib.agent import topics
 from os_win import constants as os_win_const
 from os_win import exceptions as os_win_exc
 

@@ -24,7 +24,7 @@ import ddt
 import mock
 from neutron.agent import rpc as agent_rpc
 from neutron.common import rpc as n_rpc
-from neutron.common import topics
+from neutron_lib.agent import topics
 from os_win import exceptions
 
 from networking_hyperv.neutron.agent import hyperv_neutron_agent as \
