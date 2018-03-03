@@ -2,8 +2,8 @@
 Team and repository tags
 ========================
 
-.. image:: http://governance.openstack.org/badges/networking-hyperv.svg
-    :target: http://governance.openstack.org/reference/tags/index.html
+.. image:: https://governance.openstack.org/tc/badges/networking-hyperv.svg
+    :target: https://governance.openstack.org/tc/reference/tags/index.html
 
 .. Change things from this point on
 
@@ -23,7 +23,7 @@ Supports Python 2.7, Python 3.3, Python 3.4, and Python 3.5.
 * Free software: Apache license
 * Documentation: http://docs.openstack.org/developer/networking-hyperv
 * Source: https://git.openstack.org/cgit/openstack/networking-hyperv
-* Bugs: http://bugs.launchpad.net/networking-hyperv
+* Bugs: https://bugs.launchpad.net/networking-hyperv
 
 
 How to Install
