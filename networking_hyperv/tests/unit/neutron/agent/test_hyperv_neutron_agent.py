@@ -111,7 +111,8 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
                          agent_configurations["tunneling_ip"])
 
     @mock.patch("networking_hyperv.neutron.trunk_driver.HyperVTrunkDriver")
-    @mock.patch("neutron.agent.securitygroups_rpc.SecurityGroupServerRpcApi")
+    @mock.patch("neutron.api.rpc.handlers.securitygroups_rpc."
+                "SecurityGroupServerRpcApi")
     @mock.patch("networking_hyperv.neutron.agent.hyperv_neutron_agent"
                 ".HyperVSecurityAgent")
     @mock.patch.object(layer2.Layer2Agent, "_setup")

@@ -19,7 +19,8 @@ import sys
 
 from neutron.agent.l2.extensions import qos as qos_extension
 from neutron.agent import rpc as agent_rpc
-from neutron.agent import securitygroups_rpc as sg_rpc
+from neutron.agent import securitygroups_rpc as sg_agent_rpc
+from neutron.api.rpc.handlers import securitygroups_rpc as sg_rpc
 from neutron.common import config as common_config
 from neutron.common import topics
 from neutron.conf.agent import common as neutron_config
@@ -43,11 +44,11 @@ LOG = logging.getLogger(__name__)
 _port_synchronized = c_util.get_port_synchronized_decorator('n-hv-agent-')
 
 
-class HyperVSecurityAgent(sg_rpc.SecurityGroupAgentRpc):
+class HyperVSecurityAgent(sg_agent_rpc.SecurityGroupAgentRpc):
 
     def __init__(self, context, plugin_rpc):
         super(HyperVSecurityAgent, self).__init__(context, plugin_rpc)
-        if sg_rpc.is_firewall_enabled():
+        if sg_agent_rpc.is_firewall_enabled():
             self._setup_rpc()
 
     @property
