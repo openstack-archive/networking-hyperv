@@ -16,8 +16,8 @@ import sys
 
 import mock
 from neutron.agent import rpc as agent_rpc
-from neutron.common import topics
 from neutron import wsgi
+from neutron_lib.agent import topics
 from oslo_config import cfg
 import webob
 

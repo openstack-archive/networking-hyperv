@@ -22,8 +22,8 @@ from neutron.agent import rpc as agent_rpc
 from neutron.agent import securitygroups_rpc as sg_agent_rpc
 from neutron.api.rpc.handlers import securitygroups_rpc as sg_rpc
 from neutron.common import config as common_config
-from neutron.common import topics
 from neutron.conf.agent import common as neutron_config
+from neutron_lib.agent import topics
 from os_win import exceptions
 from os_win import utilsfactory
 from oslo_log import log as logging
