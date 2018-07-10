@@ -24,7 +24,7 @@ Supports Python 2.7, Python 3.3, Python 3.4, and Python 3.5.
 * Documentation: http://docs.openstack.org/developer/networking-hyperv
 * Source: https://git.openstack.org/cgit/openstack/networking-hyperv
 * Bugs: https://bugs.launchpad.net/networking-hyperv
-
+* Release notes: https://docs.openstack.org/releasenotes/networking-hyperv/index.html
 
 How to Install
 --------------
