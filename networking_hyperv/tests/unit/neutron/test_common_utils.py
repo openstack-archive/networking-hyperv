@@ -14,12 +14,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ddt
 import mock
+from os_win import exceptions as os_win_exc
 
 from networking_hyperv.neutron import _common_utils
 from networking_hyperv.tests import base
 
 
+@ddt.ddt
 class TestCommonUtils(base.BaseTestCase):
 
     @mock.patch.object(_common_utils.lockutils, 'synchronized_with_prefix')
@@ -40,5 +43,20 @@ class TestCommonUtils(base.BaseTestCase):
         fake_method(fake_arg=mock.sentinel.arg, port_id=mock.sentinel.port_id)
         mock_sync_with_prefix.assert_called_once_with(lock_prefix)
         mock_synchronized.assert_called_once_with(expected_lock_name)
+        fake_method_side_effect.assert_called_once_with(
+            mock.sentinel.arg, mock.sentinel.port_id)
+
+    @ddt.data(os_win_exc.HyperVPortNotFoundException(message='test'),
+              os_win_exc.HyperVvNicNotFound(message='test'))
+    def test_ignore_missing_ports_decorator(self, exc):
+        fake_method_side_effect = mock.Mock()
+        fake_method_side_effect.side_effect = exc
+
+        @_common_utils.ignore_missing_ports
+        def fake_method(fake_arg, port_id):
+            fake_method_side_effect(fake_arg, port_id)
+
+        fake_method(mock.sentinel.arg, mock.sentinel.port_id)
+
         fake_method_side_effect.assert_called_once_with(
             mock.sentinel.arg, mock.sentinel.port_id)
