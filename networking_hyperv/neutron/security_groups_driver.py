@@ -132,6 +132,7 @@ class HyperVSecurityGroupsDriverMixin(object):
             newports[port['id']] = _rules
         return newports
 
+    @c_utils.ignore_missing_ports
     def prepare_port_filter(self, port):
         if not port.get('port_security_enabled'):
             LOG.info('Port %s does not have security enabled. '
@@ -214,6 +215,7 @@ class HyperVSecurityGroupsDriverMixin(object):
     def apply_port_filter(self, port):
         LOG.info('Applying port filter.')
 
+    @c_utils.ignore_missing_ports
     def update_port_filter(self, port):
         if not port.get('port_security_enabled'):
             LOG.info('Port %s does not have security enabled. '
@@ -264,6 +266,7 @@ class HyperVSecurityGroupsDriverMixin(object):
         self._security_ports[port['device']] = port
         self._sec_group_rules[port['id']] = added_rules[port['id']]
 
+    @c_utils.ignore_missing_ports
     def remove_port_filter(self, port):
         LOG.info('Removing port filter')
         self._security_ports.pop(port['device'], None)
