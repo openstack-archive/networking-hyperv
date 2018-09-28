@@ -15,7 +15,12 @@
 #    under the License.
 
 import inspect
+from os_win import exceptions as os_win_exc
 from oslo_concurrency import lockutils
+from oslo_log import log as logging
+from oslo_utils import reflection
+
+LOG = logging.getLogger(__name__)
 
 
 def get_port_synchronized_decorator(lock_prefix):
@@ -36,3 +41,22 @@ def get_port_synchronized_decorator(lock_prefix):
             return inner()
         return wrapper
     return _port_synchronized
+
+
+def ignore_missing_ports(f):
+    def wrapper(*args, **kwargs):
+        # The decorated method is expected to accept a port as argument.
+        call_args = inspect.getcallargs(f, *args, **kwargs)
+        port_id = (call_args.get('port_id') or
+                   call_args.get('port', {}).get('id'))
+
+        try:
+            return f(*args, **kwargs)
+        except (os_win_exc.HyperVPortNotFoundException,
+                os_win_exc.HyperVvNicNotFound):
+            func_name = reflection.get_callable_name(f)
+            LOG.warning("Could not find port '%(port_id)s' while executing "
+                        "'%(func_name)s'. It may have been removed.",
+                        dict(port_id=port_id,
+                             func_name=func_name))
+    return wrapper
