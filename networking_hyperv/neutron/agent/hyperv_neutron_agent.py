@@ -133,7 +133,7 @@ class HyperVNeutronAgent(hyperv_base.Layer2Agent):
 
     def _init_nvgre(self):
         # if NVGRE is enabled, self._nvgre_ops is required in order to properly
-        # set the agent state (see get_agent_configrations method).
+        # set the agent state (see get_agent_configurations method).
         if not CONF.NVGRE.enable_support:
             return
 
