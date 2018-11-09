@@ -52,8 +52,7 @@ def ignore_missing_ports(f):
 
         try:
             return f(*args, **kwargs)
-        except (os_win_exc.HyperVPortNotFoundException,
-                os_win_exc.HyperVvNicNotFound):
+        except os_win_exc.NotFound:
             func_name = reflection.get_callable_name(f)
             LOG.warning("Could not find port '%(port_id)s' while executing "
                         "'%(func_name)s'. It may have been removed.",
