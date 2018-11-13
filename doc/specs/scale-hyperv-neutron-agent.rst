@@ -85,7 +85,7 @@ of things that can be done.
 address this, the PyMI module has been created and it will be used instead [2].
 PyMI is a drop-in replacement of WMI, as it maintains the same interface, via
 its WMI wrapper, meaning that PyMI can be used on any previous, current and
-future branches of networking-hyperv. It has been been observed that PyMI
+future branches of networking-hyperv. It has been observed that PyMI
 reduces the execution time by roughly 2.0-2.2X, compared to the old WMI.
 
 **b.** Implement vNIC creation / deletion event listeners. Currently, the
