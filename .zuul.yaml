@@ -4,4 +4,5 @@
       - openstack-lower-constraints-jobs
       - openstack-python-jobs-neutron
       - openstack-python36-jobs-neutron
+      - openstack-python37-jobs-neutron
       - release-notes-jobs-python3
