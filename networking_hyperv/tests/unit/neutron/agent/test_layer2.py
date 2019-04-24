@@ -24,6 +24,7 @@ import ddt
 import neutron
 from neutron.conf.agent import common as neutron_config
 from neutron_lib.agent import topics
+from neutron_lib import rpc as n_rpc
 from os_win import constants as os_win_const
 from os_win import exceptions as os_win_exc
 
@@ -123,7 +124,7 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
     @mock.patch('oslo_service.loopingcall.FixedIntervalLoopingCall')
     @mock.patch.object(agent_base.Layer2Agent, '_setup_qos_extension')
     @mock.patch.object(neutron.agent.rpc, 'create_consumers')
-    @mock.patch.object(neutron.common.rpc, 'get_client')
+    @mock.patch.object(n_rpc, 'get_client')
     @mock.patch.object(neutron.agent.rpc, 'PluginReportStateAPI')
     @mock.patch.object(neutron.agent.rpc, 'PluginApi')
     def test_setup_rpc(self, mock_plugin_api, mock_plugin_report_state_api,

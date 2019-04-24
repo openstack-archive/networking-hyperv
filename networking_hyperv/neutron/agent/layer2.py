@@ -22,9 +22,9 @@ import re
 import eventlet
 from eventlet import tpool
 from neutron.agent import rpc as agent_rpc
-from neutron.common import rpc as n_rpc
 from neutron_lib.agent import topics
 from neutron_lib import constants as n_const
+from neutron_lib import rpc as n_rpc
 from os_win import constants as os_win_const
 from os_win import exceptions as os_win_exc
 from oslo_concurrency import lockutils
