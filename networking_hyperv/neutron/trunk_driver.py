@@ -15,8 +15,8 @@
 
 from neutron.api.rpc.callbacks import events
 from neutron.api.rpc.handlers import resources_rpc
-from neutron.services.trunk import constants as t_const
 from neutron.services.trunk.rpc import agent as trunk_rpc
+from neutron_lib.services.trunk import constants as t_const
 from os_win import constants as os_win_const
 from os_win import utilsfactory
 from oslo_log import log as logging
@@ -125,12 +125,12 @@ class HyperVTrunkDriver(trunk_rpc.TrunkSkeleton):
             self._set_port_vlan(trunk.port_id, vlan_id, vlan_trunk)
 
             self._trunk_rpc.update_trunk_status(self._context, trunk.id,
-                                                t_const.ACTIVE_STATUS)
+                                                t_const.TRUNK_ACTIVE_STATUS)
         except Exception:
             # something broke
             LOG.exception("Failure setting up subports for %s", trunk.port_id)
             self._trunk_rpc.update_trunk_status(self._context, trunk.id,
-                                                t_const.DEGRADED_STATUS)
+                                                t_const.TRUNK_DEGRADED_STATUS)
 
     def _set_port_vlan(self, port_id, vlan_id, vlan_trunk=None):
         LOG.info('Binding VLAN ID: %(vlan_id)s, VLAN trunk: '

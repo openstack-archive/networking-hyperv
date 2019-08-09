@@ -20,7 +20,7 @@ Unit tests for the Hyper-V Trunk Driver.
 import mock
 from neutron.api.rpc.callbacks import events
 from neutron.api.rpc.handlers import resources_rpc
-from neutron.services.trunk import constants as t_const
+from neutron_lib.services.trunk import constants as t_const
 from os_win import constants as os_win_const
 import oslo_messaging
 import testtools
@@ -135,7 +135,8 @@ class TestHyperVTrunkDriver(base.HyperVBaseTestCase):
             [mock_subport.segmentation_id])
         mock_set_vlan.has_calls([
             mock.call(self.trunk_driver._context, mock_trunk.id, status)
-            for status in [t_const.ACTIVE_STATUS, t_const.DEGRADED_STATUS]])
+            for status in [t_const.TRUNK_ACTIVE_STATUS,
+                           t_const.TRUNK_DEGRADED_STATUS]])
 
     def _check_set_port_vlan(self, vlan_trunk, operation_mode):
         self.trunk_driver._set_port_vlan(mock.sentinel.port_id,
