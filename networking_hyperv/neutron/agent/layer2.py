@@ -353,7 +353,7 @@ class Layer2Agent(base_agent.BaseAgent):
         """Process the new devices."""
         try:
             devices_details_list = self._plugin_rpc.get_devices_details_list(
-                self._context, self._added_ports, self._agent_id)
+                self._context, self._added_ports, self._agent_id, self._host)
         except Exception as exc:
             LOG.debug("Unable to get ports details for "
                       "devices %(devices)s: %(exc)s",
