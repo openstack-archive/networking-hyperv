@@ -68,8 +68,8 @@ class HyperVSecurityGroupsDriverMixin(object):
         self.cache_lock = threading.Lock()
 
         # TODO(claudiub): remove this on the next os-win release.
-        clear_cache = lambda port_id: self._utils._sg_acl_sds.pop(port_id,
-                                                                  None)
+        clear_cache = lambda port_id: (  # noqa: E731
+            self._utils._sg_acl_sds.pop(port_id, None))
         self._utils.clear_port_sg_acls_cache = clear_cache
 
     def _select_sg_rules_for_port(self, port, direction):
