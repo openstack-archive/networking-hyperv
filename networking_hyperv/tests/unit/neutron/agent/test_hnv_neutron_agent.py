@@ -18,8 +18,8 @@ Unit tests for the Neutron HNV L2 Agent.
 """
 
 import sys
+from unittest import mock
 
-import mock
 
 from networking_hyperv.neutron.agent import hnv_neutron_agent as hnv_agent
 from networking_hyperv.neutron import constants

@@ -17,8 +17,8 @@
 Unit tests for Windows Hyper-V QoS Driver.
 """
 
-import mock
 from neutron_lib.services.qos import constants as qos_consts
+from unittest import mock
 
 from networking_hyperv.neutron.qos import qos_driver
 from networking_hyperv.tests import base

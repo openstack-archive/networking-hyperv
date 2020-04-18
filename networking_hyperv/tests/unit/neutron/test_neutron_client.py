@@ -17,7 +17,7 @@
 Unit tests for the neutron client.
 """
 
-import mock
+from unittest import mock
 
 from networking_hyperv.neutron import config
 from networking_hyperv.neutron import constants

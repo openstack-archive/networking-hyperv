@@ -14,8 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 import ddt
-import mock
 from os_win import exceptions as os_win_exc
 
 from networking_hyperv.neutron import _common_utils

@@ -17,7 +17,7 @@
 Unit tests for the networking-hyperv config module.
 """
 
-import mock
+from unittest import mock
 
 from networking_hyperv.neutron import config
 from networking_hyperv.tests import base

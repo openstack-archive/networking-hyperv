@@ -19,9 +19,9 @@ Unit tests for Windows Hyper-V virtual switch neutron driver
 """
 
 import sys
+from unittest import mock
 
 import ddt
-import mock
 from neutron.agent import rpc as agent_rpc
 from neutron_lib.agent import topics
 from neutron_lib import rpc as n_rpc

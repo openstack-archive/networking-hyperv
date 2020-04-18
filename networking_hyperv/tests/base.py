@@ -21,10 +21,10 @@ import logging as std_logging
 import os
 import os.path
 import traceback
+from unittest import mock
 
 import eventlet.timeout
 import fixtures
-import mock
 from os_win import utilsfactory
 from oslo_utils import strutils
 from oslotest import mock_fixture

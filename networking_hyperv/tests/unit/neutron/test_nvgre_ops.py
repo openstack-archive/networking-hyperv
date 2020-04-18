@@ -17,7 +17,7 @@
 Unit tests for Windows Hyper-V NVGRE driver.
 """
 
-import mock
+from unittest import mock
 
 from networking_hyperv.neutron import config
 from networking_hyperv.neutron import constants

@@ -17,8 +17,8 @@
 Unit tests for Neutron base agent.
 """
 
-import mock
 from neutron.agent import rpc as agent_rpc
+from unittest import mock
 
 from networking_hyperv.neutron.agent import base as agent_base
 from networking_hyperv.tests import base as test_base

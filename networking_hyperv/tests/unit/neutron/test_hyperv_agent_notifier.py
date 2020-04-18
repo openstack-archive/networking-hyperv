@@ -17,7 +17,7 @@
 Unit Tests for Hyper-V Agent Notifier.
 """
 
-import mock
+from unittest import mock
 
 from networking_hyperv.neutron import constants
 from networking_hyperv.neutron import hyperv_agent_notifier

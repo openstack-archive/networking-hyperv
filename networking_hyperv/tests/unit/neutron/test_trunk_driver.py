@@ -17,11 +17,12 @@
 Unit tests for the Hyper-V Trunk Driver.
 """
 
-import mock
 from neutron.api.rpc.callbacks import events
 from neutron.api.rpc.handlers import resources_rpc
 from neutron_lib.services.trunk import constants as t_const
 from os_win import constants as os_win_const
+from unittest import mock
+
 import oslo_messaging
 import testtools
 

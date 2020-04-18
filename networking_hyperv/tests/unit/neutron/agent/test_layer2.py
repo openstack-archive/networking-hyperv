@@ -18,7 +18,7 @@ Unit tests for Neutron layer 2 agent.
 """
 import collections
 import eventlet
-import mock
+from unittest import mock
 
 import ddt
 import neutron

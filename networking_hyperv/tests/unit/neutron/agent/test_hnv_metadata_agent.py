@@ -13,8 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import sys
+from unittest import mock
 
-import mock
 from neutron.agent import rpc as agent_rpc
 from neutron import wsgi
 from neutron_lib.agent import topics
