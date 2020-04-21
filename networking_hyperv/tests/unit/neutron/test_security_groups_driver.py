@@ -428,7 +428,7 @@ class SecurityGroupRuleR2BaseTestCase(SecurityGroupRuleTestHelper):
     def _create_sg_rule(self, protocol=None, action=None, direction='egress'):
         protocol = protocol or self._FAKE_PROTOCOL
         action = action or self._FAKE_ACTION
-        remote_addr = (self._FAKE_DEST_IP_PREFIX if direction is 'egress' else
+        remote_addr = (self._FAKE_DEST_IP_PREFIX if direction == 'egress' else
                        self._FAKE_SOURCE_IP_PREFIX)
         return sg_driver.SecurityGroupRuleR2(
             self._acl('direction', self._FAKE_DIRECTION),
