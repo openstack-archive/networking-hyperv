@@ -91,8 +91,9 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
 
         # Test with remote_group_id
         fake_sg_template['remote_group_id'] = self._FAKE_SG_ID
-        self._driver._sg_members[self._FAKE_SG_ID] = {self._FAKE_ETHERTYPE:
-                                                      [self._FAKE_MEMBER_IP]}
+        self._driver._sg_members[self._FAKE_SG_ID] = {
+            self._FAKE_ETHERTYPE: [(self._FAKE_MEMBER_IP,
+                                    mock.sentinel.member_mac)]}
         rule_list = self._driver._select_sg_rules_for_port(mock_port,
                                                            'ingress')
         self.assertEqual('10.0.0.1/32', rule_list[0]['source_ip_prefix'])
@@ -101,7 +102,7 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
 
         # Test for fixed 'ip' existing in 'sg_members'
         self._driver._sg_members[self._FAKE_SG_ID][self._FAKE_ETHERTYPE] = [
-            '10.0.0.2']
+            ('10.0.0.2', mock.sentinel.member_mac)]
 
         mock_port['fixed_ips'] = ['10.0.0.2']
         rule_list = self._driver._select_sg_rules_for_port(mock_port,
@@ -110,7 +111,8 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
 
         # Test for 'egress' direction
         fake_sg_template['direction'] = 'egress'
-        fix_ip = [self._FAKE_MEMBER_IP, '10.0.0.2']
+        fix_ip = [(self._FAKE_MEMBER_IP, mock.sentinel.mac1),
+                  ('10.0.0.2', mock.sentinel.mac2)]
         self._driver._sg_members[self._FAKE_SG_ID][self._FAKE_ETHERTYPE] = (
             fix_ip)
 
