@@ -87,7 +87,7 @@ class HyperVSecurityGroupsDriverMixin(object):
                     port_rules.append(grp_rule)
                     continue
                 ethertype = rule['ethertype']
-                for ip in self._sg_members[remote_group_id][ethertype]:
+                for ip, mac in self._sg_members[remote_group_id][ethertype]:
                     if ip in fixed_ips:
                         continue
                     ip_rule = rule.copy()
