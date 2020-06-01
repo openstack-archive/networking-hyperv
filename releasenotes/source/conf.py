@@ -58,9 +58,9 @@ master_doc = 'index'
 copyright = u'2015, Winstackers Developers'
 
 # openstackdocstheme options
-repository_name = 'openstack/networking-hyperv'
-bug_project = 'networking-hyperv'
-bug_tag = ''
+openstackdocs_repo_name = 'openstack/networking-hyperv'
+openstackdocs_bug_project = 'networking-hyperv'
+openstackdocs_bug_tag = ''
 
 # Release notes are version independent.
 # The full version, including alpha/beta/rc tags.
@@ -98,7 +98,7 @@ exclude_patterns = []
 # show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'native'
 
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
