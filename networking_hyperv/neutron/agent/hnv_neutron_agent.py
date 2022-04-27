@@ -94,6 +94,7 @@ class HNVAgent(hyperv_base.Layer2Agent):
 def main():
     """The entry point for the HNV Agent."""
     neutron_config.register_agent_state_opts_helper(CONF)
+    common_config.register_common_config_options()
     common_config.init(sys.argv[1:])
     neutron_config.setup_logging()
 

@@ -219,6 +219,7 @@ class MetadataProxy(base_agent.BaseAgent):
 
 
 def register_config_opts():
+    common_config.register_common_config_options()
     neutron_config.register_agent_state_opts_helper(CONF)
     meta_config.register_meta_conf_opts(
         meta_config.METADATA_PROXY_HANDLER_OPTS)
