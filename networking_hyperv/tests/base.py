@@ -26,6 +26,7 @@ from unittest import mock
 import eventlet.timeout
 import fixtures
 from os_win import utilsfactory
+from oslo_utils import importutils
 from oslo_utils import strutils
 from oslotest import mock_fixture
 import testtools
@@ -156,9 +157,31 @@ class BaseTestCase(testtools.TestCase):
 
 
 class HyperVBaseTestCase(BaseTestCase):
+    _autospec_classes = []
+
     def setUp(self):
         super(HyperVBaseTestCase, self).setUp()
 
-        utilsfactory_patcher = mock.patch.object(utilsfactory, '_get_class')
+        utilsfactory_patcher = mock.patch.object(
+            utilsfactory, '_get_class', HyperVBaseTestCase._mock_get_class)
         utilsfactory_patcher.start()
-        self.addCleanup(utilsfactory_patcher.stop)
+        self.addCleanup(mock.patch.stopall)
+
+        self._patch_autospec_classes()
+
+    @staticmethod
+    def _mock_get_class(class_type, *args, **kwargs):
+        existing_classes = utilsfactory.utils_map[class_type]
+        class_info = existing_classes[0]
+        imported_class = importutils.import_class(class_info['path'])
+
+        return mock.Mock(autospec=imported_class)
+
+    def _patch_autospec_classes(self):
+        for class_type in self._autospec_classes:
+            mocked_class = mock.MagicMock(autospec=class_type)
+            patcher = mock.patch(
+                '.'.join([class_type.__module__, class_type.__name__]),
+                mocked_class)
+            patcher.start()
+            self.addCleanup(patcher.stop)

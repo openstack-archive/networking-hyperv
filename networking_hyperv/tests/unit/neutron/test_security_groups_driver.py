@@ -73,7 +73,6 @@ class TestHyperVSecurityGroupsDriver(SecurityGroupRuleTestHelper):
         super(TestHyperVSecurityGroupsDriver, self).setUp()
 
         self._driver = sg_driver.HyperVSecurityGroupsDriver()
-        self._driver._utils = mock.MagicMock(autospec=self._driver._utils)
 
     def test__select_sg_rules_for_port(self):
         mock_port = self._get_port()

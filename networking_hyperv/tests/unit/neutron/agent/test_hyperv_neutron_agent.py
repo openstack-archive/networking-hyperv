@@ -71,9 +71,6 @@ class TestHyperVNeutronAgent(base.HyperVBaseTestCase):
         super(TestHyperVNeutronAgent, self).setUp()
         self.agent = self._get_agent()
 
-        self.agent._utils = mock.MagicMock(autospec=self.agent._utils)
-        self.agent._metricsutils = mock.MagicMock(
-            autospec=self.agent._metricsutils)
         self.agent._nvgre_ops = mock.MagicMock(
             autospec=hyperv_agent.nvgre_ops.HyperVNvgreOps)
 

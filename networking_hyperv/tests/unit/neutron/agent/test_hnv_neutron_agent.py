@@ -42,7 +42,6 @@ class TestHNVAgent(test_base.HyperVBaseTestCase):
         super(TestHNVAgent, self).setUp()
 
         self.agent = self._get_agent()
-        self.agent._utils = mock.Mock(autospec=self.agent._utils)
 
     def test_get_agent_configurations(self):
         self.config(logical_network=mock.sentinel.logical_network,

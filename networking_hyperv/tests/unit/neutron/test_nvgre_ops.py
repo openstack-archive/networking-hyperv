@@ -47,9 +47,6 @@ class TestHyperVNvgreOps(base.HyperVBaseTestCase):
         self.ops.context = self.context
         self.ops._notifier = mock.MagicMock(
             autospec=nvgre_ops.hyperv_agent_notifier.AgentNotifierApi)
-        self.ops._hyperv_utils = mock.MagicMock(
-            autospec=self.ops._hyperv_utils)
-        self.ops._nvgre_utils = mock.MagicMock(autospec=self.ops._nvgre_utils)
 
     @mock.patch.object(nvgre_ops.hyperv_agent_notifier, 'AgentNotifierApi')
     def test_init_notifier(self, mock_notifier):

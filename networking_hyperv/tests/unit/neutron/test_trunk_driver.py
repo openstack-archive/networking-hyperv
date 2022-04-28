@@ -43,8 +43,6 @@ class TestHyperVTrunkDriver(base.HyperVBaseTestCase):
 
         self.trunk_driver = trunk_driver.HyperVTrunkDriver(
             mock.sentinel.context)
-        self.trunk_driver._utils = mock.MagicMock(
-            autospec=self.trunk_driver._utils)
 
     def test_handle_trunks_deleted(self):
         mock_trunk = mock.MagicMock()

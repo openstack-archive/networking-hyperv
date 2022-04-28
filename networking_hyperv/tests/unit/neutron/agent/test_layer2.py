@@ -67,8 +67,6 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
 
         self._agent = self._get_agent()
 
-        self._agent._utils = mock.MagicMock(
-            autospec=self._agent._utils)
         self._agent._plugin_rpc = mock.Mock(
             autospec=agent_base.agent_rpc.PluginApi)
         self._agent._endpoints = mock.MagicMock()
@@ -397,7 +395,7 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         self._agent._prologue()
 
         # self._added_ports = self._utils.get_vnic_ids()
-        mock_create_listeners.assert_called_once_with()
+        self._agent._create_event_listeners.assert_called_once_with()
 
     def test_reclaim_local_network(self):
         self._agent._network_vswitch_map = {}
@@ -447,16 +445,13 @@ class TestLayer2Agent(test_base.HyperVBaseTestCase):
         network_vswitch_map = (net_uuid, vswitch_map)
         mock_get_vswitch_map_by_port_id.return_value = network_vswitch_map
 
-        with mock.patch.object(
-                self._agent._utils,
-                'remove_switch_port') as mock_remove_switch_port:
-            self._agent._port_unbound(self._FAKE_PORT_ID, vnic_deleted=False)
+        self._agent._port_unbound(self._FAKE_PORT_ID, vnic_deleted=False)
 
-            if net_uuid:
-                mock_remove_switch_port.assert_called_once_with(
-                    self._FAKE_PORT_ID, False)
-            else:
-                self.assertFalse(mock_remove_switch_port.called)
+        if net_uuid:
+            self._agent._utils.remove_switch_port.assert_called_once_with(
+                self._FAKE_PORT_ID, False)
+        else:
+            self.assertFalse(self._agent._utils.remove_switch_port.called)
 
     @mock.patch.object(agent_base.Layer2Agent,
                        '_reclaim_local_network')
