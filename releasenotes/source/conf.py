@@ -55,7 +55,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-copyright = u'2015, Winstackers Developers'
+copyright = '2015, Winstackers Developers'
 
 # openstackdocstheme options
 openstackdocs_repo_name = 'openstack/networking-hyperv'
@@ -199,8 +199,8 @@ htmlhelp_basename = 'NetworkingHypervReleaseNotesdoc'
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     ('index', 'NetworkingHypervReleaseNotes.tex',
-     u'Networking-Hyperv Release Notes Documentation',
-     u'Winstackers Developers', 'manual'),
+     'Networking-Hyperv Release Notes Documentation',
+     'Winstackers Developers', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -230,8 +230,8 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'networkinghypervreleasenotes',
-     u'Networking-Hyperv Release Notes Documentation',
-     [u'Winstackers Developers'], 1)
+     'Networking-Hyperv Release Notes Documentation',
+     ['Winstackers Developers'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -245,8 +245,8 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     ('index', 'NetworkingHypervReleaseNotes',
-     u'Networking-Hyperv Release Notes Documentation',
-     u'Winstackers Developers', 'NetworkingHypervReleaseNotes',
+     'Networking-Hyperv Release Notes Documentation',
+     'Winstackers Developers', 'NetworkingHypervReleaseNotes',
      'Neutron L2 agent and mechanism driver.',
      'Miscellaneous'),
 ]
