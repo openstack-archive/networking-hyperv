@@ -1,7 +1,0 @@
-[run]
-branch = True
-source = networking_hyperv
-omit = networking_hyperv/tests/*,networking_hyperv/openstack/*
-
-[report]
-ignore_errors = True
